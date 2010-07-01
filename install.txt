@@ -1,0 +1,14 @@
+Plugin Name: Moderation
+Author: Andrew Billits
+
+Files:
+----------------------------------------------------------------------
+moderation-framework.php - goes in /wp-content/mu-plugins
+moderation-admin - goes in /wp-admin/
+warning.php - goes in /wp-admin/
+moderation.js - goes in /wp-content/
+
+Instructions:
+----------------------------------------------------------------------
+1) Place the files in the specified directories
+2) If the auto-install does not add the db table(s) for you then run the sql code in "sql.txt" on your wpmu db
