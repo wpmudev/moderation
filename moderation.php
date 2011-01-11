@@ -59,7 +59,7 @@ add_action('delete_comment', 'moderation_comment_delete');
 add_filter('get_comment_text', 'moderation_report_comment', 20, 1);
 add_filter('wpmu_users_columns', 'moderation_site_admin_users_column_header');
 add_action('manage_users_custom_column','moderation_site_admin_users_column_content', 1, 2);
-add_filter('admin_menu', 'hook_admin_menu');
+add_filter('admin_menu', 'moderation_hook_admin_menu');
 //------------------------------------------------------------------------//
 //---Functions------------------------------------------------------------//
 //------------------------------------------------------------------------//
@@ -229,7 +229,7 @@ function moderation_plug_pages() {
 	}
 }
 
-function hook_admin_menu() {
+function moderation_hook_admin_menu() {
 	global $menu, $submenu, $_wp_submenu_nopriv;
 	
 	//unset($menu[100]);
