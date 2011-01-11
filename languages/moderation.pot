@@ -1,0 +1,479 @@
+# Translation of the WordPress plugin Moderation 1.0.2 by S H Mohanjith (Incsub), Andrew Billits (Incsub).
+# Copyright (C) 2011 S H Mohanjith (Incsub), Andrew Billits (Incsub)
+# This file is distributed under the same license as the Moderation package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2011.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Moderation 1.0.2\n"
+"Report-Msgid-Bugs-To: http://wordpress.org/tag/moderation\n"
+"POT-Creation-Date: 2011-01-11 10:23+0530\n"
+"PO-Revision-Date: 2011-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. #-#-#-#-#  moderation.pot (Moderation 1.0.2)  #-#-#-#-#
+#. Plugin Name of the plugin/theme
+#: moderation.php:220 moderation.php:474 moderation.php:594
+msgid "Moderation"
+msgstr ""
+
+#: moderation.php:221
+msgid "Blog Moderation"
+msgstr ""
+
+#: moderation.php:221 moderation.php:599 moderation.php:721
+#: moderation.php:1114
+msgid "Blogs"
+msgstr ""
+
+#: moderation.php:222
+msgid "Post Moderation"
+msgstr ""
+
+#: moderation.php:222 moderation.php:597 moderation.php:910
+msgid "Posts"
+msgstr ""
+
+#: moderation.php:223
+msgid "Comment Moderation"
+msgstr ""
+
+#: moderation.php:223 moderation.php:598 moderation.php:1274
+msgid "Comments"
+msgstr ""
+
+#: moderation.php:224 moderation.php:2105
+msgid "Report Archive"
+msgstr ""
+
+#: moderation.php:225 moderation.php:719 moderation.php:1540
+msgid "Post Archive"
+msgstr ""
+
+#: moderation.php:226 moderation.php:1819
+msgid "Comment Archive"
+msgstr ""
+
+#: moderation.php:228
+msgid "Moderation Warning"
+msgstr ""
+
+#: moderation.php:315
+msgid "Thanks for the report. We'll look into it"
+msgstr ""
+
+#: moderation.php:344
+msgid "Report This "
+msgstr ""
+
+#: moderation.php:402 moderation.php:717 moderation.php:2287
+msgid "Warnings"
+msgstr ""
+
+#: moderation.php:477
+msgid "Site Moderators"
+msgstr ""
+
+#: moderation.php:481
+msgid ""
+"These users may access the moderation tab. Space separated list of usernames."
+msgstr ""
+
+#: moderation.php:483
+msgid ""
+"Note that all Site Admins can access the moderation tab by default and do "
+"not need to be listed here."
+msgstr ""
+
+#: moderation.php:487
+msgid "Moderators Can Remove Users"
+msgstr ""
+
+#: moderation.php:489 moderation.php:496 moderation.php:779 moderation.php:849
+msgid "Yes"
+msgstr ""
+
+#: moderation.php:490 moderation.php:497 moderation.php:780 moderation.php:850
+msgid "No"
+msgstr ""
+
+#: moderation.php:494
+msgid "Moderators Can Remove Blogs"
+msgstr ""
+
+#: moderation.php:501
+msgid "Report Post Reasons"
+msgstr ""
+
+#: moderation.php:505
+msgid "Reasons for reporting a post. One per line."
+msgstr ""
+
+#: moderation.php:509
+msgid "Report Comment Reasons"
+msgstr ""
+
+#: moderation.php:513
+msgid "Reasons for reporting a comment. One per line."
+msgstr ""
+
+#: moderation.php:517
+msgid "Report Blog Reasons"
+msgstr ""
+
+#: moderation.php:521
+msgid "Reasons for reporting a Blog. One per line."
+msgstr ""
+
+#: moderation.php:525
+msgid "Remove Notes"
+msgstr ""
+
+#: moderation.php:529
+msgid "Note to user when a post or comment is removed. One per line."
+msgstr ""
+
+#: moderation.php:553
+msgid "Reason:"
+msgstr ""
+
+#: moderation.php:558
+msgid "Notes"
+msgstr ""
+
+#: moderation.php:558 moderation.php:560
+msgid "optional"
+msgstr ""
+
+#: moderation.php:560 moderation.php:713 moderation.php:1857
+msgid "Email"
+msgstr ""
+
+#: moderation.php:562
+msgid "Submit Report"
+msgstr ""
+
+#: moderation.php:595
+msgid "Reports"
+msgstr ""
+
+#: moderation.php:601 moderation.php:710
+msgid "User Information"
+msgstr ""
+
+#: moderation.php:605 moderation.php:634 moderation.php:1575
+#: moderation.php:1845
+msgid "Username"
+msgstr ""
+
+#: moderation.php:611 moderation.php:639 moderation.php:1581
+#: moderation.php:1851
+msgid "User ID"
+msgstr ""
+
+#: moderation.php:617 moderation.php:645 moderation.php:1587
+msgid "User Email"
+msgstr ""
+
+#: moderation.php:624 moderation.php:652 moderation.php:676 moderation.php:786
+#: moderation.php:856
+msgid "Continue"
+msgstr ""
+
+#: moderation.php:630 moderation.php:772
+msgid "Remove User"
+msgstr ""
+
+#: moderation.php:659 moderation.php:842
+msgid "Remove Blog"
+msgstr ""
+
+#: moderation.php:663 moderation.php:1563 moderation.php:1833
+#: moderation.php:2122
+msgid "Blog ID"
+msgstr ""
+
+#: moderation.php:669 moderation.php:1569 moderation.php:1839
+msgid "Blogname"
+msgstr ""
+
+#: moderation.php:715
+msgid "Registered"
+msgstr ""
+
+#: moderation.php:719 moderation.php:1710 moderation.php:2003
+#: moderation.php:2246 moderation.php:2249
+msgid "View"
+msgstr ""
+
+#: moderation.php:731
+msgid "None"
+msgstr ""
+
+#: moderation.php:736
+msgid "Back"
+msgstr ""
+
+#: moderation.php:742 moderation.php:792 moderation.php:798 moderation.php:862
+#: moderation.php:868
+msgid "Error"
+msgstr ""
+
+#: moderation.php:744 moderation.php:800
+msgid "User not found."
+msgstr ""
+
+#: moderation.php:776 moderation.php:846
+msgid "Are you sure?"
+msgstr ""
+
+#: moderation.php:794
+msgid "You cannot remove a moderator or site admin."
+msgstr ""
+
+#: moderation.php:864
+msgid "You cannot remove the main blog."
+msgstr ""
+
+#: moderation.php:870
+msgid "Blog not found."
+msgstr ""
+
+#: moderation.php:943 moderation.php:945 moderation.php:947
+#: moderation.php:1147 moderation.php:1149 moderation.php:1151
+#: moderation.php:1307 moderation.php:1309 moderation.php:1311
+#: moderation.php:1662 moderation.php:1664 moderation.php:1666
+#: moderation.php:1948 moderation.php:1950 moderation.php:1952
+#: moderation.php:2192 moderation.php:2194 moderation.php:2196
+msgid "Previous Page"
+msgstr ""
+
+#: moderation.php:950 moderation.php:952 moderation.php:1154
+#: moderation.php:1156 moderation.php:1314 moderation.php:1316
+#: moderation.php:1669 moderation.php:1671 moderation.php:1955
+#: moderation.php:1957 moderation.php:2199 moderation.php:2201
+msgid "Next Page"
+msgstr ""
+
+#: moderation.php:964 moderation.php:1549 moderation.php:2114
+msgid "Post"
+msgstr ""
+
+#: moderation.php:965 moderation.php:1329
+msgid "Information"
+msgstr ""
+
+#: moderation.php:995
+msgid "Post Title"
+msgstr ""
+
+#: moderation.php:998
+msgid "Post Author"
+msgstr ""
+
+#: moderation.php:999 moderation.php:1002 moderation.php:1370
+#: moderation.php:1373 moderation.php:1705 moderation.php:1706
+#: moderation.php:1735 moderation.php:1736 moderation.php:2000
+#: moderation.php:2001 moderation.php:2038 moderation.php:2039
+msgid "Archive"
+msgstr ""
+
+#: moderation.php:1001 moderation.php:1168 moderation.php:1372
+#: moderation.php:1682 moderation.php:1735 moderation.php:1968
+#: moderation.php:2038 moderation.php:2116 moderation.php:2215
+msgid "Blog"
+msgstr ""
+
+#: moderation.php:1004 moderation.php:1169 moderation.php:1375
+msgid "Report Date/Time"
+msgstr ""
+
+#: moderation.php:1007 moderation.php:1170 moderation.php:1378
+msgid "Reason(s)"
+msgstr ""
+
+#: moderation.php:1016 moderation.php:1171 moderation.php:1387
+msgid "Action"
+msgstr ""
+
+#: moderation.php:1018 moderation.php:1204 moderation.php:1389
+msgid "Reject Report"
+msgstr ""
+
+#: moderation.php:1019
+msgid "Remove Post"
+msgstr ""
+
+#: moderation.php:1022 moderation.php:1393
+msgid "Remove Note"
+msgstr ""
+
+#: moderation.php:1037 moderation.php:1216 moderation.php:1408
+msgid "Process Reports"
+msgstr ""
+
+#: moderation.php:1043
+msgid "There currently aren't any posts in the moderation queue."
+msgstr ""
+
+#: moderation.php:1087 moderation.php:1247 moderation.php:1470
+msgid "Reports Processed."
+msgstr ""
+
+#: moderation.php:1205
+msgid "Suspend Blog"
+msgstr ""
+
+#: moderation.php:1222
+msgid "There currently aren't any blogs in the moderation queue."
+msgstr ""
+
+#: moderation.php:1328 moderation.php:2115
+msgid "Comment"
+msgstr ""
+
+#: moderation.php:1369
+msgid "Comment Author"
+msgstr ""
+
+#: moderation.php:1390
+msgid "Remove Comment"
+msgstr ""
+
+#: moderation.php:1414
+msgid "There currently aren't any comments in the moderation queue."
+msgstr ""
+
+#: moderation.php:1547
+msgid "Post Type"
+msgstr ""
+
+#: moderation.php:1550
+msgid "Page"
+msgstr ""
+
+#: moderation.php:1551
+msgid "Revision"
+msgstr ""
+
+#: moderation.php:1552 moderation.php:2117
+msgid "All"
+msgstr ""
+
+#: moderation.php:1557 moderation.php:2128
+msgid "Post ID"
+msgstr ""
+
+#: moderation.php:1593
+msgid ""
+"Note that only posts published after the moderation plugin was added will be "
+"available."
+msgstr ""
+
+#: moderation.php:1595 moderation.php:1871 moderation.php:2141
+msgid "Search"
+msgstr ""
+
+#: moderation.php:1683 moderation.php:1736 moderation.php:1969
+#: moderation.php:2039
+msgid "Author"
+msgstr ""
+
+#: moderation.php:1684
+msgid "Title"
+msgstr ""
+
+#: moderation.php:1685 moderation.php:1737 moderation.php:1970
+#: moderation.php:2040 moderation.php:2216
+msgid "Date/Time"
+msgstr ""
+
+#: moderation.php:1686
+msgid "Type"
+msgstr ""
+
+#: moderation.php:1687 moderation.php:1971 moderation.php:2217
+msgid "Actions"
+msgstr ""
+
+#: moderation.php:1722
+msgid "No posts found."
+msgstr ""
+
+#: moderation.php:1752 moderation.php:2055
+msgid "Return"
+msgstr ""
+
+#: moderation.php:1827 moderation.php:2134
+msgid "Comment ID"
+msgstr ""
+
+#: moderation.php:1863
+msgid "IP"
+msgstr ""
+
+#: moderation.php:1869
+msgid ""
+"Note that only comments published after the moderation plugin was added will "
+"be available."
+msgstr ""
+
+#: moderation.php:2015
+msgid "No comments found."
+msgstr ""
+
+#: moderation.php:2036
+msgid "View Comment"
+msgstr ""
+
+#: moderation.php:2112 moderation.php:2212
+msgid "Report Type"
+msgstr ""
+
+#: moderation.php:2213
+msgid "Report Reason"
+msgstr ""
+
+#: moderation.php:2214
+msgid "Report Status"
+msgstr ""
+
+#: moderation.php:2263
+msgid "No reports found."
+msgstr ""
+
+#: moderation.php:2299
+msgid "Accept"
+msgstr ""
+
+#: moderation.php:2333
+msgid ""
+"Please install the latest version of <a href=\"http://premium.wpmudev.org/"
+"project/update-notifications/\" title=\"Download Now &raquo;\">our free "
+"Update Notifications plugin</a> which helps you stay up-to-date with the "
+"most stable, secure versions of WPMU DEV themes and plugins. <a href="
+"\"http://premium.wpmudev.org/wpmu-dev/update-notifications-plugin-"
+"information/\">More information &raquo;</a>"
+msgstr ""
+
+#. Plugin URI of the plugin/theme
+msgid "http://premium.wpmudev.org/project/moderation"
+msgstr ""
+
+#. Description of the plugin/theme
+msgid "Moderate posts, comments and blogs across your WordPresds Mu install"
+msgstr ""
+
+#. Author of the plugin/theme
+msgid "S H Mohanjith (Incsub), Andrew Billits (Incsub)"
+msgstr ""
+
+#. Author URI of the plugin/theme
+msgid "http://incsub.com"
+msgstr ""

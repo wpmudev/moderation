@@ -1,11 +1,13 @@
 <?php
 /*
 Plugin Name: Moderation
-Plugin URI: 
-Description:
-Author: Andrew Billits (Incsub)
-Version: 1.0.1
+Plugin URI: http://premium.wpmudev.org/project/moderation
+Description: Moderate posts, comments and blogs across your WordPresds Mu install
+Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
+Version: 1.0.2
 Author URI: http://incsub.com
+Network: true
+WDP ID: 82
 */
 
 /* 
@@ -57,6 +59,7 @@ add_action('delete_comment', 'moderation_comment_delete');
 add_filter('get_comment_text', 'moderation_report_comment', 20, 1);
 add_filter('wpmu_users_columns', 'moderation_site_admin_users_column_header');
 add_action('manage_users_custom_column','moderation_site_admin_users_column_content', 1, 2);
+add_filter('admin_menu', 'hook_admin_menu');
 //------------------------------------------------------------------------//
 //---Functions------------------------------------------------------------//
 //------------------------------------------------------------------------//
@@ -214,13 +217,26 @@ function moderation_plug_pages() {
 		} else {
 			$total_count = '';
 		}
-		add_menu_page(__('Moderation'), __('Moderation') . $total_count, 0, 'moderation-admin.php');
-		add_submenu_page('moderation-admin.php', __('Blog Moderation'), __('Blogs') . $blog_count, '0', 'blogs', 'moderation_blogs' );
-		add_submenu_page('moderation-admin.php', __('Post Moderation'), __('Posts') . $post_count, '0', 'posts', 'moderation_posts' );
-		add_submenu_page('moderation-admin.php', __('Comment Moderation'), __('Comments') . $comment_count, '0', 'comments', 'moderation_comments' );
-		add_submenu_page('moderation-admin.php', __('Report Archive'), __('Report Archive'), '0', 'report-archive', 'moderation_report_archive' );
-		add_submenu_page('moderation-admin.php', __('Post Archive'), __('Post Archive'), '0', 'post-archive', 'moderation_post_archive' );
-		add_submenu_page('moderation-admin.php', __('Comment Archive'), __('Comment Archive'), '0', 'comment-archive', 'moderation_comment_archive' );
+		add_menu_page(__('Moderation', 'moderation'), __('Moderation', 'moderation') . $total_count, 0, 'moderation', 'moderation_overview');
+		add_submenu_page('moderation', __('Blog Moderation', 'moderation'), __('Blogs', 'moderation') . $blog_count, '0', 'moderation-blogs', 'moderation_blogs' );
+		add_submenu_page('moderation', __('Post Moderation', 'moderation'), __('Posts', 'moderation') . $post_count, '0', 'moderation-posts', 'moderation_posts' );
+		add_submenu_page('moderation', __('Comment Moderation', 'moderation'), __('Comments', 'moderation') . $comment_count, '0', 'moderation-comments', 'moderation_comments' );
+		add_submenu_page('moderation', __('Report Archive', 'moderation'), __('Report Archive', 'moderation'), '0', 'moderation-report-archive', 'moderation_report_archive' );
+		add_submenu_page('moderation', __('Post Archive', 'moderation'), __('Post Archive', 'moderation'), '0', 'moderation-post-archive', 'moderation_post_archive' );
+		add_submenu_page('moderation', __('Comment Archive', 'moderation'), __('Comment Archive', 'moderation'), '0', 'moderation-comment-archive', 'moderation_comment_archive' );
+		
+		add_menu_page(__('Moderation Warning', 'moderation'), __('Moderation Warning', 'moderation'), 0, 'moderation-warning', 'moderation_warnings');
+	}
+}
+
+function hook_admin_menu() {
+	global $menu, $submenu, $_wp_submenu_nopriv;
+	
+	//unset($menu[100]);
+	foreach ($menu as $key=>$val) {
+		if ($val[2] == 'moderation-warning') {
+			unset($menu[$key]);
+		}
 	}
 }
 
@@ -274,7 +290,12 @@ function moderation_print_scripts() {
 function moderation_init() {
 	global $wpdb, $moderation_current_version;
 	
-	wp_register_script('moderation', get_option('siteurl') . '/wp-content/moderation.js', array('thickbox'), $moderation_current_version);
+	if ( !is_multisite() )
+		exit( 'The Messaging plugin is only compatible with WordPress Multisite.' );
+	
+	wp_register_script('moderation', plugins_url('moderation/js/moderation.js'), array('thickbox'), $moderation_current_version);
+	
+	load_plugin_textdomain('moderation', false, dirname(plugin_basename(__FILE__)).'/languages');
 	
 	if (isset($_REQUEST['moderation_action'])) {
 		
@@ -291,7 +312,7 @@ function moderation_init() {
 			case "submit_report" :
 				
 				moderation_process_submission();
-				echo '<p>&nbsp;</p><p>&nbsp;</p><p>Thanks for the report. We\'ll look into it.</p>'; //// CHMAC TODO Prettify and nocache header this
+				echo '<p>&nbsp;</p><p>&nbsp;</p><p>'.__('Thanks for the report. We\'ll look into it', 'moderation').'</p>'; //// CHMAC TODO Prettify and nocache header this
 				echo '<script type="text/javascript">setTimeout("tb_remove()",5000);</script>';
 				exit();
 				
@@ -320,7 +341,7 @@ function moderation_process_submission() {
 
 function moderation_report_link($object_type, $object_id) {
 	global $post;
-	$link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="Report this ' . $object_type . '">' . __('Report This ' . ucfirst($object_type) ) . '</a></p>';
+	$link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="Report this ' . $object_type . '">' . __('Report This ' . ucfirst($object_type) , 'moderation') . '</a></p>';
 	return $link;
 }
 
@@ -354,8 +375,8 @@ function moderation_warnings_check() {
 		$user_warning_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_ID . "' AND warning_read = '0'");
 		if ( $user_warning_count > 0 ) {
 			echo "
-			<SCRIPT LANGUAGE='JavaScript'>
-			window.location='warning.php';
+			<SCRIPT LANGUAGE='javascript'>
+			window.location='admin.php?page=moderation-warning';
 			</script>
 			";
 		}
@@ -378,7 +399,7 @@ function moderation_comment_delete($comment_ID) {
 }
 
 function moderation_site_admin_users_column_header($posts_columns) {
-	$new_column = array('warnings' => __('Warnings'));
+	$new_column = array('warnings' => __('Warnings', 'moderation'));
 	$posts_columns = array_merge($posts_columns, $new_column);
 	return $posts_columns;
 }
@@ -450,62 +471,62 @@ function moderation_site_admin_options() {
 	$moderation_report_blog_reasons = get_site_option('moderation_report_blog_reasons', array('Spam','Language'));
 	$moderation_remove_notes = get_site_option('moderation_remove_notes', array('Warning: TOS violated - Further infractions could result in your account being removed','Warning: AUP violated - Further infractions could result in your account being removed'));
 	?>
-		<h3><?php _e('Moderation'); ?></h3>
+		<h3><?php _e('Moderation', 'moderation'); ?></h3>
 		<table class="form-table">
 			<tr valign="top"> 
-				<th scope="row"><?php _e('Site Moderators') ?></th> 
+				<th scope="row"><?php _e('Site Moderators', 'moderation') ?></th> 
 				<td>
 					<input name="site_moderators" id="site_moderators" style="width: 95%;" value="<?php echo $site_moderators; ?>" size="45" type="text">
 					<br />
-					<?php _e('These users may access the moderation tab. Space separated list of usernames.') ?>
+					<?php _e('These users may access the moderation tab. Space separated list of usernames.', 'moderation') ?>
 					<br />
-					<?php _e('Note that all Site Admins can access the moderation tab by default and do not need to be listed here.') ?>
+					<?php _e('Note that all Site Admins can access the moderation tab by default and do not need to be listed here.', 'moderation') ?>
 				</td>
 			</tr>
 			<tr valign="top"> 
-				<th scope="row"><?php _e('Moderators Can Remove Users') ?></th> 
+				<th scope="row"><?php _e('Moderators Can Remove Users', 'moderation') ?></th> 
 				<td>
-					<input name="moderators_can_remove_users" id="moderators_can_remove_users" value="yes" <?php if ( $moderators_can_remove_users == 'yes' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('Yes'); ?><br />
-					<input name="moderators_can_remove_users" id="moderators_can_remove_users" value="no" <?php if ( $moderators_can_remove_users == 'no' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('No'); ?>
+					<input name="moderators_can_remove_users" id="moderators_can_remove_users" value="yes" <?php if ( $moderators_can_remove_users == 'yes' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('Yes', 'moderation'); ?><br />
+					<input name="moderators_can_remove_users" id="moderators_can_remove_users" value="no" <?php if ( $moderators_can_remove_users == 'no' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('No', 'moderation'); ?>
 				</td>
 			</tr>
 			<tr valign="top"> 
-				<th scope="row"><?php _e('Moderators Can Remove Blogs') ?></th> 
+				<th scope="row"><?php _e('Moderators Can Remove Blogs', 'moderation') ?></th> 
 				<td>
-					<input name="moderators_can_remove_blogs" id="moderators_can_remove_blogs" value="yes" <?php if ( $moderators_can_remove_blogs == 'yes' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('Yes'); ?><br />
-					<input name="moderators_can_remove_blogs" id="moderators_can_remove_blogs" value="no" <?php if ( $moderators_can_remove_blogs == 'no' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('No'); ?>
+					<input name="moderators_can_remove_blogs" id="moderators_can_remove_blogs" value="yes" <?php if ( $moderators_can_remove_blogs == 'yes' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('Yes', 'moderation'); ?><br />
+					<input name="moderators_can_remove_blogs" id="moderators_can_remove_blogs" value="no" <?php if ( $moderators_can_remove_blogs == 'no' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('No', 'moderation'); ?>
 				</td>
 			</tr>
 			<tr valign="top">
-				<th scope="row"><?php _e('Report Post Reasons') ?></th>
+				<th scope="row"><?php _e('Report Post Reasons', 'moderation') ?></th>
 				<td>
 					<textarea name="moderation_report_post_reasons" id="moderation_report_post_reasons" cols='40' rows='5' style="width: 95%;"><?php echo $moderation_report_post_reasons == '' ? '' : @implode( "\n", $moderation_report_post_reasons ); ?></textarea>
 					<br />
-					<?php _e('Reasons for reporting a post. One per line.') ?>
+					<?php _e('Reasons for reporting a post. One per line.', 'moderation') ?>
 				</td>
 			</tr>
 			<tr valign="top">
-				<th scope="row"><?php _e('Report Comment Reasons') ?></th>
+				<th scope="row"><?php _e('Report Comment Reasons', 'moderation') ?></th>
 				<td>
 					<textarea name="moderation_report_comment_reasons" id="moderation_report_comment_reasons" cols='40' rows='5' style="width: 95%;"><?php echo $moderation_report_comment_reasons == '' ? '' : @implode( "\n", $moderation_report_comment_reasons ); ?></textarea>
 					<br />
-					<?php _e('Reasons for reporting a comment. One per line.') ?>
+					<?php _e('Reasons for reporting a comment. One per line.', 'moderation') ?>
 				</td>
 			</tr>
 			<tr valign="top">
-				<th scope="row"><?php _e('Report Blog Reasons') ?></th>
+				<th scope="row"><?php _e('Report Blog Reasons', 'moderation') ?></th>
 				<td>
 					<textarea name="moderation_report_blog_reasons" id="moderation_report_blog_reasons" cols='40' rows='5' style="width: 95%;"><?php echo $moderation_report_blog_reasons == '' ? '' : @implode( "\n", $moderation_report_blog_reasons ); ?></textarea>
 					<br />
-					<?php _e('Reasons for reporting a Blog. One per line.') ?>
+					<?php _e('Reasons for reporting a Blog. One per line.', 'moderation') ?>
 				</td>
 			</tr>
 			<tr valign="top">
-				<th scope="row"><?php _e('Remove Notes') ?></th>
+				<th scope="row"><?php _e('Remove Notes', 'moderation') ?></th>
 				<td>
 					<textarea name="moderation_remove_notes" id="moderation_remove_notes" cols='40' rows='5' style="width: 95%;"><?php echo $moderation_remove_notes == '' ? '' : @implode( "\n", $moderation_remove_notes ); ?></textarea>
 					<br />
-					<?php _e('Note to user when a post or comment is removed. One per line.') ?>
+					<?php _e('Note to user when a post or comment is removed. One per line.', 'moderation') ?>
 				</td>
 			</tr>
 		</table>
@@ -529,16 +550,16 @@ function moderation_report_form($ot, $oi) {
 	$output .= '<input type="hidden" name="object_type" value="' . $ot . '">';
 	$output .= '<input type="hidden" name="object_id" value="' . $oi . '">';
 	$output .= '<input type="hidden" name="moderation_action" value="submit_report">';
-	$output .= '<p>' . __('Reason:') . ' <select name="report_reason">';
+	$output .= '<p>' . __('Reason:', 'moderation') . ' <select name="report_reason">';
 	foreach ( $reasons as $reason ) {
 		$output .= '<option value="' . $reason . '">' . $reason . '</option>';
 	}
 	$output .= '</select></p>';
-	$output .= '<p>' . __('Notes') . ' (' . __('optional') . '):<br/><textarea name="report_note" style="width:95%;"></textarea></p>';
+	$output .= '<p>' . __('Notes', 'moderation') . ' (' . __('optional', 'moderation') . '):<br/><textarea name="report_note" style="width:95%;"></textarea></p>';
 	if ( !is_user_logged_in() ) {
-		$output .= '<p>' . __('Email') . ' (' . __('optional') . '):<br /><input type="text" name="report_author_email">';
+		$output .= '<p>' . __('Email', 'moderation') . ' (' . __('optional', 'moderation') . '):<br /><input type="text" name="report_author_email">';
 	}
-	$output .= '<p><input type="submit" name="action" value="' . __('Submit Report') . '">';
+	$output .= '<p><input type="submit" name="action" value="' . __('Submit Report', 'moderation') . '">';
 	$output .= '</form>';
 	$output .= '</div>';
 	
@@ -558,7 +579,7 @@ function moderation_overview() {
 	}
 	
 	if (isset($_GET['updated'])) {
-		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg'])) ?></p></div><?php
+		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
 	switch( $_GET[ 'action' ] ) {
@@ -570,90 +591,89 @@ function moderation_overview() {
 			$blog_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'blog' AND report_status = 'new'");
 			$comment_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'comment' AND report_status = 'new'");
 			?>
-            <h2><?php _e('Moderation') ?></h2>
-            <h3><?php _e('Reports') ?></h3>
+            <h2><?php _e('Moderation', 'moderation') ?></h2>
+            <h3><?php _e('Reports', 'moderation') ?></h3>
             <p>
-            <strong><?php _e('Posts'); ?></strong>: <?php echo $blog_count; ?><br />
-            <strong><?php _e('Comments'); ?></strong>: <?php echo $comment_count; ?><br />
-            <strong><?php _e('Blogs'); ?></strong>: <?php echo $blog_count; ?>
+            <strong><?php _e('Posts', 'moderation'); ?></strong>: <?php echo $blog_count; ?><br />
+            <strong><?php _e('Comments', 'moderation'); ?></strong>: <?php echo $comment_count; ?><br />
+            <strong><?php _e('Blogs', 'moderation'); ?></strong>: <?php echo $blog_count; ?>
             </p>
-            <h3><?php _e('User Information') ?></h3>
-            <form name="user_information" method="POST" action="moderation-admin.php?action=user_information">
+            <h3><?php _e('User Information', 'moderation') ?></h3>
+            <form name="user_information" method="POST" action="admin.php?page=moderation&action=user_information">
                 <table class="form-table">
                 <tr valign="top">
-                <th scope="row"><?php _e('Username') ?></th>
+                <th scope="row"><?php _e('Username', 'moderation') ?></th>
                 <td><input type="text" name="user_login" id="user_login" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('User ID') ?></th>
+                <th scope="row"><?php _e('User ID', 'moderation') ?></th>
                 <td><input type="text" name="uid" id="uid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('User Email') ?></th>
+                <th scope="row"><?php _e('User Email', 'moderation') ?></th>
                 <td><input type="text" name="user_email" id="user_email" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 </table>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Continue') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" /> 
             </p> 
             </form>
             <?php
 			if ( $moderators_can_remove_users == 'yes' ) {
 			?>
-            <h3><?php _e('Remove User') ?></h3>
-            <form name="remove_user" method="POST" action="moderation-admin.php?action=remove_user">
+            <h3><?php _e('Remove User', 'moderation') ?></h3>
+            <form name="remove_user" method="POST" action="admin.php?page=moderation&action=remove_user">
                 <table class="form-table">
                 <tr valign="top">
-                <th scope="row"><?php _e('Username') ?></th>
+                <th scope="row"><?php _e('Username', 'moderation') ?></th>
                 <td><input type="text" name="user_login" id="user_login" style="width: 95%" value="" />
-                <br />
-                <?php //_e('') ?></td> 
+                <br /></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('User ID') ?></th>
+                <th scope="row"><?php _e('User ID', 'moderation') ?></th>
                 <td><input type="text" name="uid" id="uid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('User Email') ?></th>
+                <th scope="row"><?php _e('User Email', 'moderation') ?></th>
                 <td><input type="text" name="user_email" id="user_email" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 </table>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Continue') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" /> 
             </p> 
             </form>
             <?php
 			}
 			if ( $moderators_can_remove_blogs == 'yes' ) {
 			?>
-            <h3><?php _e('Remove Blog') ?></h3>
-            <form name="remove_blog" method="POST" action="moderation-admin.php?action=remove_blog">
+            <h3><?php _e('Remove Blog', 'moderation') ?></h3>
+            <form name="remove_blog" method="POST" action="admin.php?page=moderation&action=remove_blog">
                 <table class="form-table">
                 <tr valign="top">
-                <th scope="row"><?php _e('Blog ID') ?></th>
+                <th scope="row"><?php _e('Blog ID', 'moderation') ?></th>
                 <td><input type="text" name="bid" id="bid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Blogname') ?></th>
+                <th scope="row"><?php _e('Blogname', 'moderation') ?></th>
                 <td><input type="text" name="blog_name" id="blog_name" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 </table>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Continue') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" /> 
             </p> 
             </form>
             <?php
@@ -687,18 +707,18 @@ function moderation_overview() {
 				$user_email = $wpdb->get_var("SELECT user_email FROM " . $wpdb->base_prefix . "users WHERE ID = '" . $uid . "'");
 				$user_blogs = get_blogs_of_user( $uid, true );
 				?>
-				<h2><?php _e('User Information') ?>: <?php echo $user_login; ?></h2>
-				<form name="user_information" method="POST" action="moderation-admin.php">
+				<h2><?php _e('User Information', 'moderation') ?>: <?php echo $user_login; ?></h2>
+				<form name="user_information" method="POST" action="admin.php?page=moderation">
 				<p>
-				<strong><?php _e('Email'); ?></strong>: <?php echo $user_email; ?>
+				<strong><?php _e('Email', 'moderation'); ?></strong>: <?php echo $user_email; ?>
 				<br />
-				<strong><?php _e('Registered'); ?></strong>: <?php echo mysql2date(get_option('date_format'), $user_registered); ?>
+				<strong><?php _e('Registered', 'moderation'); ?></strong>: <?php echo mysql2date(get_option('date_format'), $user_registered); ?>
 				<br />
-				<strong><?php _e('Warnings'); ?></strong>: <?php echo $warning_count; ?>
+				<strong><?php _e('Warnings', 'moderation'); ?></strong>: <?php echo $warning_count; ?>
 				<br />
-				<strong><?php _e('Post Archive'); ?></strong>: <a href="moderation-admin.php?page=post-archive&post_type=post&uid=<?php echo $uid;?>" style="text-decoration:none;" ><?php _e('View'); ?></a>
+				<strong><?php _e('Post Archive', 'moderation'); ?></strong>: <a href="admin.php?page=moderation-post-archive&post_type=post&uid=<?php echo $uid;?>" style="text-decoration:none;" ><?php _e('View', 'moderation'); ?></a>
 				<br />
-				<strong><?php _e('Blogs'); ?></strong>:
+				<strong><?php _e('Blogs', 'moderation'); ?></strong>:
                 <?php
 				if( is_array( $user_blogs ) ) {
 					echo '<br />';
@@ -708,20 +728,20 @@ function moderation_overview() {
 						echo '<br />';
 					}
 				} else {
-					echo __('None');
+					echo __('None', 'moderation');
 				}
 				?>
 				</p>
 				<p class="submit">
-				<input type="submit" name="Submit" value="<?php _e('Back') ?>" />
+				<input type="submit" name="Submit" value="<?php _e('Back', 'moderation') ?>" />
 				</p>
 				</form>
 				<?php
 			} else {
 				?>
-				<h2><?php _e('Error') ?></h2>
+				<h2><?php _e('Error', 'moderation') ?></h2>
                 <?php
-				echo '<p>' . __('User not found.') . '</p>';
+				echo '<p>' . __('User not found.', 'moderation') . '</p>';
 			}
 		break;
 		//---------------------------------------------------//
@@ -749,35 +769,35 @@ function moderation_overview() {
 				$user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->base_prefix . "users WHERE ID = '" . $uid . "'");
 				if ( !is_moderator( $user_login ) ) {
 					?>
-					<h2><?php _e('Remove User') ?>: <?php echo $user_login; ?></h2>
-					<form name="remove_user" method="POST" action="moderation-admin.php?action=remove_user_process&uid=<?php echo $uid; ?>">
+					<h2><?php _e('Remove User', 'moderation') ?>: <?php echo $user_login; ?></h2>
+					<form name="remove_user" method="POST" action="admin.php?page=moderation&action=remove_user_process&uid=<?php echo $uid; ?>">
 						<table class="form-table">
 						<tr valign="top">
-						<th scope="row"><?php _e('Are you sure?') ?></th>
+						<th scope="row"><?php _e('Are you sure?', 'moderation') ?></th>
 						<td>
 						<select name="remove_user" id="remove_user">
-								<option value="yes"><?php _e('Yes'); ?></option>
-								<option value="no" selected="selected" ><?php _e('No'); ?></option>
+								<option value="yes"><?php _e('Yes', 'moderation'); ?></option>
+								<option value="no" selected="selected" ><?php _e('No', 'moderation'); ?></option>
 						</select>
 						<br /><?php //_e('') ?></td>
 						</tr>
 						</table>
 					<p class="submit">
-					<input type="submit" name="Submit" value="<?php _e('Continue') ?>" />
+					<input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
 					</p>
 					</form>
 					<?php
 				} else {
 					?>
-					<h2><?php _e('Error') ?></h2>
+					<h2><?php _e('Error', 'moderation') ?></h2>
 					<?php
-					echo '<p>' . __('You cannot remove a moderator or site admin.') . '</p>';
+					echo '<p>' . __('You cannot remove a moderator or site admin.', 'moderation') . '</p>';
 				}
 			} else {
 				?>
-				<h2><?php _e('Error') ?></h2>
+				<h2><?php _e('Error', 'moderation') ?></h2>
                 <?php
-				echo '<p>' . __('User not found.') . '</p>';
+				echo '<p>' . __('User not found.', 'moderation') . '</p>';
 			}
 		break;
 		//---------------------------------------------------//
@@ -785,14 +805,14 @@ function moderation_overview() {
 			if ( $_POST['remove_user'] == 'no' ) {
 				echo "
 				<SCRIPT LANGUAGE='JavaScript'>
-				window.location='moderation-admin.php';
+				window.location='admin.php?page=moderation';
 				</script>
 				";
 			} else {
 				wpmu_delete_user( $_GET['uid'] );
 				echo "
 				<SCRIPT LANGUAGE='JavaScript'>
-				window.location='moderation-admin.php?updated=true&updatedmsg=" . urlencode('User removed') . "';
+				window.location='admin.php?page=moderation&updated=true&updatedmsg=" . urlencode('User removed') . "';
 				</script>
 				";
 			}
@@ -819,35 +839,35 @@ function moderation_overview() {
 				$blog_details = get_blog_details( $bid );
 				if ( $bid != '1' ) {
 					?>
-					<h2><?php _e('Remove Blog') ?>: <a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a></h2>
-					<form name="remove_blog" method="POST" action="moderation-admin.php?action=remove_blog_process&bid=<?php echo $bid; ?>">
+					<h2><?php _e('Remove Blog', 'moderation') ?>: <a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a></h2>
+					<form name="remove_blog" method="POST" action="admin.php?page=moderation&action=remove_blog_process&bid=<?php echo $bid; ?>">
 						<table class="form-table">
 						<tr valign="top">
-						<th scope="row"><?php _e('Are you sure?') ?></th>
+						<th scope="row"><?php _e('Are you sure?', 'moderation') ?></th>
 						<td>
 						<select name="remove_blog" id="remove_blog">
-								<option value="yes"><?php _e('Yes'); ?></option>
-								<option value="no" selected="selected" ><?php _e('No'); ?></option>
+								<option value="yes"><?php _e('Yes', 'moderation'); ?></option>
+								<option value="no" selected="selected" ><?php _e('No', 'moderation'); ?></option>
 						</select>
 						<br /><?php //_e('') ?></td>
 						</tr>
 						</table>
 					<p class="submit">
-					<input type="submit" name="Submit" value="<?php _e('Continue') ?>" />
+					<input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
 					</p>
 					</form>
 					<?php
 				} else {
 					?>
-					<h2><?php _e('Error') ?></h2>
+					<h2><?php _e('Error', 'moderation') ?></h2>
 					<?php
-					echo '<p>' . __('You cannot remove the main blog.') . '</p>';
+					echo '<p>' . __('You cannot remove the main blog.', 'moderation') . '</p>';
 				}
 			} else {
 				?>
-				<h2><?php _e('Error') ?></h2>
+				<h2><?php _e('Error', 'moderation') ?></h2>
                 <?php
-				echo '<p>' . __('Blog not found.') . '</p>';
+				echo '<p>' . __('Blog not found.', 'moderation') . '</p>';
 			}
 		break;
 		//---------------------------------------------------//
@@ -855,14 +875,14 @@ function moderation_overview() {
 			if ( $_POST['remove_blog'] == 'no' ) {
 				echo "
 				<SCRIPT LANGUAGE='JavaScript'>
-				window.location='moderation-admin.php';
+				window.location='admin.php?page=moderation';
 				</script>
 				";
 			} else {
 				wpmu_delete_blog( $_GET['bid'] );
 				echo "
 				<SCRIPT LANGUAGE='JavaScript'>
-				window.location='moderation-admin.php?updated=true&updatedmsg=" . urlencode('Blog removed') . "';
+				window.location='admin.php?page=moderation&updated=true&updatedmsg=" . urlencode('Blog removed') . "';
 				</script>
 				";
 			}
@@ -880,14 +900,14 @@ function moderation_posts() {
 	}
 	
 	if (isset($_GET['updated'])) {
-		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg'])) ?></p></div><?php
+		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
 			?>
-            <h2><?php _e('Posts') ?></h2>
+            <h2><?php _e('Posts', 'moderation') ?></h2>
 			<?php
 			if( isset( $_GET[ 'start' ] ) == false ) {
 				$start = 0;
@@ -920,29 +940,29 @@ function moderation_posts() {
 					//$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
 					
 					if( $start == 0 ) { 
-						echo __('Previous Page');
+						echo __('Previous Page', 'moderation');
 					} elseif( $start <= 30 ) { 
-						echo '<a href="moderation-admin.php?page=posts&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+						echo '<a href="admin.php?page=moderation-posts&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} else {
-						echo '<a href="moderation-admin.php?page=posts&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+						echo '<a href="admin.php?page=moderation-posts&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} 
 					if ( $next ) {
-						echo '&nbsp;||&nbsp;<a href="moderation-admin.php?page=posts&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page') . '</a>';
+						echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-posts&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
 					} else {
-						echo '&nbsp;||&nbsp;' . __('Next Page');
+						echo '&nbsp;||&nbsp;' . __('Next Page', 'moderation');
 					}
 					?>
 					</fieldset>
 					</td></table>
 					<?php
 				}
-				echo "<form name='process_reports' method='POST' action='moderation-admin.php?page=posts&action=process_reports' >";
+				echo "<form name='process_reports' method='POST' action='admin.php?page=moderation-posts&action=process_reports' >";
 				echo "
 				<br />
 				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
 				<thead><tr>
-				<th scope='col'>" . __('Post') . "</th>
-				<th width='25%' scope='col'>" . __('Information') . "</th>
+				<th scope='col'>" . __('Post', 'moderation') . "</th>
+				<th width='25%' scope='col'>" . __('Information', 'moderation') . "</th>
 				</tr></thead>
 				<tbody id='the-list'>
 				";
@@ -972,19 +992,19 @@ function moderation_posts() {
 					$reasons = $wpdb->get_results( $query, ARRAY_A );
 					echo "<td valign='top'>" . stripslashes( $post_details->post_content ) . "</td>";
 					echo "<td valign='top'>";
-					echo "<strong>" . __('Post Title') . "</strong>:<br />";
+					echo "<strong>" . __('Post Title', 'moderation') . "</strong>:<br />";
 					echo "<a href='" . $post_permalink . "' rel='permalink' class='edit'>" . stripslashes( $post_details->post_title ) . "</a>";
 					echo "<br /><br />";
-					echo "<strong>" . __('Post Author') . "</strong>:<br />";
-					echo $author_user_login . " (<a href='moderation-admin.php?page=post-archive&post_type=post&uid=" . $post_details->post_author . "' rel='permalink' class='edit'>" . __('Archive') . "</a>)";
+					echo "<strong>" . __('Post Author', 'moderation') . "</strong>:<br />";
+					echo $author_user_login . " (<a href='admin.php?page=moderation-post-archive&post_type=post&uid=" . $post_details->post_author . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
-					echo "<strong>" . __('Blog') . "</strong>:<br />";
-					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='moderation-admin.php?page=post-archive&post_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive') . "</a>)";
+					echo "<strong>" . __('Blog', 'moderation') . "</strong>:<br />";
+					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&post_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
-					echo "<strong>" . __('Report Date/Time') . "</strong>:<br />";
+					echo "<strong>" . __('Report Date/Time', 'moderation') . "</strong>:<br />";
 					echo date( $date_format . ' ' . $time_format, $report['report_stamp'] );
 					echo "<br /><br />";
-					echo "<strong>" . __('Reason(s)') . "</strong>:<br />";
+					echo "<strong>" . __('Reason(s)', 'moderation') . "</strong>:<br />";
 					foreach ( $reasons as $reason ) {
 						echo $reason['report_reason'];
 						if ( !empty( $reason['report_note'] ) ) {
@@ -993,13 +1013,13 @@ function moderation_posts() {
 						echo "<br />";
 					}
 					echo "<br />";
-					echo "<strong>" . __('Action') . "</strong>:<br />";
+					echo "<strong>" . __('Action', 'moderation') . "</strong>:<br />";
 					echo "<select name='reports[" . $report['report_ID'] . "-" . $report['report_blog_ID'] . "-" . $report['report_object_ID'] . "]'>";
-							echo "<option value='reject_report'>" . __('Reject Report') . "</option>";
-							echo "<option value='remove_post'>" . __('Remove Post') . "</option>";
+							echo "<option value='reject_report'>" . __('Reject Report', 'moderation') . "</option>";
+							echo "<option value='remove_post'>" . __('Remove Post', 'moderation') . "</option>";
 					echo "</select>";
 					echo "<br /><br />";
-					echo "<strong>" . __('Remove Note') . "</strong>:<br />";
+					echo "<strong>" . __('Remove Note', 'moderation') . "</strong>:<br />";
 					echo "<select name='remove_notes[" . $report['report_ID'] . "-" . $report['report_blog_ID'] . "-" . $report['report_object_ID'] . "]' style='width:200px;'>";
 						$remove_notes = get_site_option('moderation_remove_notes', array('Warning: TOS violated - Further infractions could result in your account being removed','Warning: AUP violated - Further infractions could result in your account being removed'));
 						foreach ( $remove_notes as $remove_note ) {
@@ -1014,13 +1034,13 @@ function moderation_posts() {
 				?>
 				</tbody></table>
 				<p class="submit">
-				<input type="submit" name="Submit" value="<?php _e('Process Reports') ?>" />
+				<input type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
 				</p>
 				</form>
 				<?php
 			} else {
 				?>
-	            <p><?php _e('There currently aren\'t any posts in the moderation queue.') ?></p>
+	            <p><?php _e('There currently aren\'t any posts in the moderation queue.', 'moderation') ?></p>
                 <?php
 			}
 		break;
@@ -1064,7 +1084,7 @@ function moderation_posts() {
 			}
 		echo "
 		<SCRIPT LANGUAGE='JavaScript'>
-		window.location='moderation-admin.php?page=posts&updated=true&updatedmsg=" . urlencode(__('Reports Processed.')) . "';
+		window.location='admin.php?page=moderation-posts&updated=true&updatedmsg=" . urlencode(__('Reports Processed.', 'moderation')) . "';
 		</script>
 		";
 		break;
@@ -1084,14 +1104,14 @@ function moderation_blogs() {
 	}
 	
 	if (isset($_GET['updated'])) {
-		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg'])) ?></p></div><?php
+		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
 			?>
-            <h2><?php _e('Blogs') ?></h2>
+            <h2><?php _e('Blogs', 'moderation') ?></h2>
 			<?php
 			if( isset( $_GET[ 'start' ] ) == false ) {
 				$start = 0;
@@ -1124,31 +1144,31 @@ function moderation_blogs() {
 					//$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
 					
 					if( $start == 0 ) { 
-						echo __('Previous Page');
+						echo __('Previous Page', 'moderation');
 					} elseif( $start <= 30 ) { 
-						echo '<a href="moderation-admin.php?page=blogs&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+						echo '<a href="admin.php?page=moderation-blogs&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} else {
-						echo '<a href="moderation-admin.php?page=blogs&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+						echo '<a href="admin.php?page=moderation-blogs&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} 
 					if ( $next ) {
-						echo '&nbsp;||&nbsp;<a href="moderation-admin.php?page=blogss&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page') . '</a>';
+						echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-blogss&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
 					} else {
-						echo '&nbsp;||&nbsp;' . __('Next Page');
+						echo '&nbsp;||&nbsp;' . __('Next Page', 'moderation');
 					}
 					?>
 					</fieldset>
 					</td></table>
 					<?php
 				}
-				echo "<form name='process_reports' method='POST' action='moderation-admin.php?page=blogs&action=process_reports' >";
+				echo "<form name='process_reports' method='POST' action='admin.php?page=moderation-blogs&action=process_reports' >";
 				echo "
 				<br />
 				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
 				<thead><tr>
-				<th scope='col'>" . __('Blog') . "</th>
-				<th scope='col'>" . __('Report Date/Time') . "</th>
-				<th scope='col'>" . __('Reason(s)') . "</th>
-				<th scope='col'>" . __('Action') . "</th>
+				<th scope='col'>" . __('Blog', 'moderation') . "</th>
+				<th scope='col'>" . __('Report Date/Time', 'moderation') . "</th>
+				<th scope='col'>" . __('Reason(s)', 'moderation') . "</th>
+				<th scope='col'>" . __('Action', 'moderation') . "</th>
 				</tr></thead>
 				<tbody id='the-list'>
 				";
@@ -1181,8 +1201,8 @@ function moderation_blogs() {
 					echo "</td>";
 					echo "<td valign='top'>";
 					echo "<select name='reports[" . $report['report_ID'] . "-" . $report['report_blog_ID'] . "]'>";
-							echo "<option value='reject_report'>" . __('Reject Report') . "</option>";
-							echo "<option value='suspend_blog'>" . __('Suspend Blog') . "</option>";
+							echo "<option value='reject_report'>" . __('Reject Report', 'moderation') . "</option>";
+							echo "<option value='suspend_blog'>" . __('Suspend Blog', 'moderation') . "</option>";
 					echo "</select>";
 					echo "</td>";
 					echo "</tr>";
@@ -1193,13 +1213,13 @@ function moderation_blogs() {
 				?>
 				</tbody></table>
 				<p class="submit">
-				<input type="submit" name="Submit" value="<?php _e('Process Reports') ?>" />
+				<input type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
 				</p>
 				</form>
 				<?php
 			} else {
 				?>
-	            <p><?php _e('There currently aren\'t any blogs in the moderation queue.') ?></p>
+	            <p><?php _e('There currently aren\'t any blogs in the moderation queue.', 'moderation') ?></p>
                 <?php
 			}
 		break;
@@ -1224,7 +1244,7 @@ function moderation_blogs() {
 			}
 		echo "
 		<SCRIPT LANGUAGE='JavaScript'>
-		window.location='moderation-admin.php?page=posts&updated=true&updatedmsg=" . urlencode(__('Reports Processed.')) . "';
+		window.location='admin.php?page=moderation-posts&updated=true&updatedmsg=" . urlencode(__('Reports Processed.', 'moderation')) . "';
 		</script>
 		";
 		break;
@@ -1244,14 +1264,14 @@ function moderation_comments() {
 	}
 	
 	if (isset($_GET['updated'])) {
-		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg'])) ?></p></div><?php
+		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
 			?>
-            <h2><?php _e('Comments') ?></h2>
+            <h2><?php _e('Comments', 'moderation') ?></h2>
 			<?php
 			if( isset( $_GET[ 'start' ] ) == false ) {
 				$start = 0;
@@ -1284,29 +1304,29 @@ function moderation_comments() {
 					//$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
 					
 					if( $start == 0 ) { 
-						echo __('Previous Page');
+						echo __('Previous Page', 'moderation');
 					} elseif( $start <= 30 ) { 
-						echo '<a href="moderation-admin.php?page=comments&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+						echo '<a href="admin.php?page=moderation-comments&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} else {
-						echo '<a href="moderation-admin.php?page=comments&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+						echo '<a href="admin.php?page=moderation-comments&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} 
 					if ( $next ) {
-						echo '&nbsp;||&nbsp;<a href="moderation-admin.php?page=comments&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page') . '</a>';
+						echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-comments&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
 					} else {
-						echo '&nbsp;||&nbsp;' . __('Next Page');
+						echo '&nbsp;||&nbsp;' . __('Next Page', 'moderation');
 					}
 					?>
 					</fieldset>
 					</td></table>
 					<?php
 				}
-				echo "<form name='process_reports' method='POST' action='moderation-admin.php?page=comments&action=process_reports' >";
+				echo "<form name='process_reports' method='POST' action='admin.php?page=moderation-comments&action=process_reports' >";
 				echo "
 				<br />
 				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
 				<thead><tr>
-				<th scope='col'>" . __('Comment') . "</th>
-				<th width='25%' scope='col'>" . __('Information') . "</th>
+				<th scope='col'>" . __('Comment', 'moderation') . "</th>
+				<th width='25%' scope='col'>" . __('Information', 'moderation') . "</th>
 				</tr></thead>
 				<tbody id='the-list'>
 				";
@@ -1346,16 +1366,16 @@ function moderation_comments() {
 					$reasons = $wpdb->get_results( $query, ARRAY_A );
 					echo "<td valign='top'>" . stripslashes( $comment_details->comment_content ) . "</td>";
 					echo "<td valign='top'>";
-					echo "<strong>" . __('Comment Author') . "</strong>:<br />";
-					echo $author . " (<a href='moderation-admin.php?page=comment-archive&email=" . $author_email . "' rel='permalink' class='edit'>" . __('Archive') . "</a>)";
+					echo "<strong>" . __('Comment Author', 'moderation') . "</strong>:<br />";
+					echo $author . " (<a href='admin.php?page=moderation-comment-archive&email=" . $author_email . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
-					echo "<strong>" . __('Blog') . "</strong>:<br />";
-					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='moderation-admin.php?page=comment-archive&post_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive') . "</a>)";
+					echo "<strong>" . __('Blog', 'moderation') . "</strong>:<br />";
+					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-comment-archive&post_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
-					echo "<strong>" . __('Report Date/Time') . "</strong>:<br />";
+					echo "<strong>" . __('Report Date/Time', 'moderation') . "</strong>:<br />";
 					echo date( $date_format . ' ' . $time_format, $report['report_stamp'] );
 					echo "<br /><br />";
-					echo "<strong>" . __('Reason(s)') . "</strong>:<br />";
+					echo "<strong>" . __('Reason(s)', 'moderation') . "</strong>:<br />";
 					foreach ( $reasons as $reason ) {
 						echo $reason['report_reason'];
 						if ( !empty( $reason['report_note'] ) ) {
@@ -1364,13 +1384,13 @@ function moderation_comments() {
 						echo "<br />";
 					}
 					echo "<br />";
-					echo "<strong>" . __('Action') . "</strong>:<br />";
+					echo "<strong>" . __('Action', 'moderation') . "</strong>:<br />";
 					echo "<select name='reports[" . $report['report_ID'] . "-" . $report['report_blog_ID'] . "-" . $report['report_object_ID'] . "]'>";
-							echo "<option value='reject_report'>" . __('Reject Report') . "</option>";
-							echo "<option value='remove_comment'>" . __('Remove Comment') . "</option>";
+							echo "<option value='reject_report'>" . __('Reject Report', 'moderation') . "</option>";
+							echo "<option value='remove_comment'>" . __('Remove Comment', 'moderation') . "</option>";
 					echo "</select>";
 					echo "<br /><br />";
-					echo "<strong>" . __('Remove Note') . "</strong>:<br />";
+					echo "<strong>" . __('Remove Note', 'moderation') . "</strong>:<br />";
 					echo "<select name='remove_notes[" . $report['report_ID'] . "-" . $report['report_blog_ID'] . "-" . $report['report_object_ID'] . "]' style='width:200px;'>";
 						$remove_notes = get_site_option('moderation_remove_notes', array('Warning: TOS violated - Further infractions could result in your account being removed','Warning: AUP violated - Further infractions could result in your account being removed'));
 						foreach ( $remove_notes as $remove_note ) {
@@ -1385,13 +1405,13 @@ function moderation_comments() {
 				?>
 				</tbody></table>
 				<p class="submit">
-				<input type="submit" name="Submit" value="<?php _e('Process Reports') ?>" />
+				<input type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
 				</p>
 				</form>
 				<?php
 			} else {
 				?>
-	            <p><?php _e('There currently aren\'t any comments in the moderation queue.') ?></p>
+	            <p><?php _e('There currently aren\'t any comments in the moderation queue.', 'moderation') ?></p>
                 <?php
 			}
 		break;
@@ -1447,7 +1467,7 @@ function moderation_comments() {
 			}
 		echo "
 		<SCRIPT LANGUAGE='JavaScript'>
-		window.location='moderation-admin.php?page=comments&updated=true&updatedmsg=" . urlencode(__('Reports Processed.')) . "';
+		window.location='admin.php?page=moderation-comments&updated=true&updatedmsg=" . urlencode(__('Reports Processed.', 'moderation')) . "';
 		</script>
 		";
 		break;
@@ -1467,7 +1487,7 @@ function moderation_post_archive() {
 	}
 	
 	if (isset($_GET['updated'])) {
-		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg'])) ?></p></div><?php
+		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
 	switch( $_GET[ 'action' ] ) {
@@ -1517,62 +1537,62 @@ function moderation_post_archive() {
 			
 			
 			?>
-            <h2><?php _e('Post Archive') ?></h2>
+            <h2><?php _e('Post Archive', 'moderation') ?></h2>
             <?php
 			if ( empty( $post_type ) ) {
 			?>
-            <form name="post_archive" method="POST" action="moderation-admin.php?page=post-archive">
+            <form name="post_archive" method="POST" action="admin.php?page=moderation-post-archive">
                 <table class="form-table">
                 <tr valign="top"> 
-                <th scope="row"><?php _e('Post Type') ?></th> 
+                <th scope="row"><?php _e('Post Type', 'moderation') ?></th> 
                 <td><select name="post_type">
-                    <option value="post"><?php _e('Post'); ?></option>
-                    <option value="page" ><?php _e('Page'); ?></option>
-                    <option value="revision" ><?php _e('Revision'); ?></option>
-                    <option value="all" selected="selected" ><?php _e('All'); ?></option>
+                    <option value="post"><?php _e('Post', 'moderation'); ?></option>
+                    <option value="page" ><?php _e('Page', 'moderation'); ?></option>
+                    <option value="revision" ><?php _e('Revision', 'moderation'); ?></option>
+                    <option value="all" selected="selected" ><?php _e('All', 'moderation'); ?></option>
                 </select>
                 </td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Post ID') ?></th>
+                <th scope="row"><?php _e('Post ID', 'moderation') ?></th>
                 <td><input type="text" name="pid" id="pid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Blog ID') ?></th>
+                <th scope="row"><?php _e('Blog ID', 'moderation') ?></th>
                 <td><input type="text" name="bid" id="bid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Blogname') ?></th>
+                <th scope="row"><?php _e('Blogname', 'moderation') ?></th>
                 <td><input type="text" name="blog_name" id="blog_name" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Username') ?></th>
+                <th scope="row"><?php _e('Username', 'moderation') ?></th>
                 <td><input type="text" name="user_login" id="user_login" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('User ID') ?></th>
+                <th scope="row"><?php _e('User ID', 'moderation') ?></th>
                 <td><input type="text" name="uid" id="uid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('User Email') ?></th>
+                <th scope="row"><?php _e('User Email', 'moderation') ?></th>
                 <td><input type="text" name="user_email" id="user_email" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 </table>
-            <p><?php _e('Note that only posts published after the moderation plugin was added will be available.'); ?></p>
+            <p><?php _e('Note that only posts published after the moderation plugin was added will be available.', 'moderation'); ?></p>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Search') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" /> 
             </p> 
             </form>
 			<?php
@@ -1639,16 +1659,16 @@ function moderation_post_archive() {
                         //$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
                         
                         if( $start == 0 ) { 
-                            echo __('Previous Page');
+                            echo __('Previous Page', 'moderation');
                         } elseif( $start <= 30 ) { 
-                            echo '<a href="moderation-admin.php?page=post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+                            echo '<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } else {
-                            echo '<a href="moderation-admin.php?page=post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+                            echo '<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } 
                         if ( $next ) {
-                            echo '&nbsp;||&nbsp;<a href="moderation-admin.php?page=post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page') . '</a>';
+                            echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
                         } else {
-                            echo '&nbsp;||&nbsp;' . __('Next Page');
+                            echo '&nbsp;||&nbsp;' . __('Next Page', 'moderation');
                         }
                         ?>
                         </fieldset>
@@ -1659,12 +1679,12 @@ function moderation_post_archive() {
                     <br />
                     <table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
                     <thead><tr>
-                    <th scope='col'>" . __('Blog') . "</th>
-                    <th scope='col'>" . __('Author') . "</th>
-                    <th scope='col'>" . __('Title') . "</th>
-                    <th scope='col'>" . __('Date/Time') . "</th>
-                    <th scope='col'>" . __('Type') . "</th>
-                    <th scope='col'>" . __('Actions') . "</th>
+                    <th scope='col'>" . __('Blog', 'moderation') . "</th>
+                    <th scope='col'>" . __('Author', 'moderation') . "</th>
+                    <th scope='col'>" . __('Title', 'moderation') . "</th>
+                    <th scope='col'>" . __('Date/Time', 'moderation') . "</th>
+                    <th scope='col'>" . __('Type', 'moderation') . "</th>
+                    <th scope='col'>" . __('Actions', 'moderation') . "</th>
                     </tr></thead>
                     <tbody id='the-list'>
                     ";
@@ -1682,12 +1702,12 @@ function moderation_post_archive() {
                         unset( $author_user_login );
                         $author_user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->users . " WHERE ID = '" . $post['post_author'] . "'");
     
-                        echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='moderation-admin.php?page=post-archive&post_type=" . $post_type . "&bid=" . $post['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive') . "</a>)</td>";
-                        echo "<td valign='top'>" . $author_user_login . " (<a href='moderation-admin.php?page=post-archive&post_type=" . $post_type . "&uid=" . $post['post_author'] . "' rel='permalink' class='edit'>" . __('Archive') . "</a>)</td>";
+                        echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&post_type=" . $post_type . "&bid=" . $post['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
+                        echo "<td valign='top'>" . $author_user_login . " (<a href='admin.php?page=moderation-post-archive&post_type=" . $post_type . "&uid=" . $post['post_author'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . stripslashes( $post['post_title'] ) . "</td>";
                         echo "<td valign='top'>" . date( $date_format . ' ' . $time_format, $post['post_stamp'] ) . "</td>";
                         echo "<td valign='top'>" . ucfirst( $post['post_type'] ) . "</td>";
-                        echo "<td valign='top'><a href='moderation-admin.php?page=post-archive&action=view&post_archive_id=" . $post['post_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&post_type=" . $post_type . "&bid=" . $bid . "&uid=" . $uid . "&pid=" . $pid . "' rel='permalink' class='edit'>" . __('View') . "</a></td>";
+                        echo "<td valign='top'><a href='admin.php?page=moderation-post-archive&action=view&post_archive_id=" . $post['post_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&post_type=" . $post_type . "&bid=" . $bid . "&uid=" . $uid . "&pid=" . $pid . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a></td>";
     
                         echo "</tr>";
                         $class = ('alternate' == $class) ? '' : 'alternate';
@@ -1699,7 +1719,7 @@ function moderation_post_archive() {
                     <?php
                 } else {
                     ?>
-                    <p><?php _e('No posts found.') ?></p>
+                    <p><?php _e('No posts found.', 'moderation') ?></p>
                     <?php
                 }
 			}
@@ -1712,24 +1732,24 @@ function moderation_post_archive() {
 			?>
         	<h2><?php echo stripslashes($post_details->post_title); ?></h2>
             <ul>
-            	<li><strong><?php _e('Blog'); ?>: </strong><a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a> (<a href="moderation-admin.php?page=post-archive&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $post_details->blog_id; ?>" style="text-decoration:none;"><?php _e('Archive'); ?></a>)</li>
-            	<li><strong><?php _e('Author'); ?>: </strong><?php echo $author_user_login; ?>  (<a href="moderation-admin.php?page=post-archive&post_type=<?php echo $_GET['post_type']; ?>&uid=<?php echo $post_details->post_author; ?>" style="text-decoration:none;"><?php _e('Archive'); ?></a>)</li>
-            	<li><strong><?php _e('Date/Time'); ?>: </strong><?php echo date( get_option('date_format') . ' ' . get_option('time_format'), $post_details->post_stamp ); ?></li>
+            	<li><strong><?php _e('Blog', 'moderation'); ?>: </strong><a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a> (<a href="admin.php?page=moderation-post-archive&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $post_details->blog_id; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
+            	<li><strong><?php _e('Author', 'moderation'); ?>: </strong><?php echo $author_user_login; ?>  (<a href="admin.php?page=moderation-post-archive&post_type=<?php echo $_GET['post_type']; ?>&uid=<?php echo $post_details->post_author; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
+            	<li><strong><?php _e('Date/Time', 'moderation'); ?>: </strong><?php echo date( get_option('date_format') . ' ' . get_option('time_format'), $post_details->post_stamp ); ?></li>
             </ul>
         	<p><?php echo stripslashes($post_details->post_content); ?></p>
             <?php
 			if ( !empty($_GET['start']) || !empty($_GET['num']) ) {
 				?>
-				<form name="post_archive" method="POST" action="moderation-admin.php?page=post-archive&start=<?php echo $_GET['start']; ?>&num=<?php echo $_GET['num']; ?>&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&pid=<?php echo $_GET['pid']; ?>">
+				<form name="post_archive" method="POST" action="admin.php?page=moderation-post-archive&start=<?php echo $_GET['start']; ?>&num=<?php echo $_GET['num']; ?>&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&pid=<?php echo $_GET['pid']; ?>">
                 <?php
 			} else {
 				?>
-            	<form name="post_archive" method="POST" action="moderation-admin.php?page=post-archive&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&pid=<?php echo $_GET['pid']; ?>">
+            	<form name="post_archive" method="POST" action="admin.php?page=moderation-post-archive&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&pid=<?php echo $_GET['pid']; ?>">
                 <?php
 			}
 			?>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Return') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Return', 'moderation') ?>" /> 
             </p> 
             </form>
     	    <?php
@@ -1750,7 +1770,7 @@ function moderation_comment_archive() {
 	}
 	
 	if (isset($_GET['updated'])) {
-		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg'])) ?></p></div><?php
+		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
 	switch( $_GET[ 'action' ] ) {
@@ -1796,59 +1816,59 @@ function moderation_comment_archive() {
 			}
 			
 			?>
-            <h2><?php _e('Comment Archive') ?></h2>
+            <h2><?php _e('Comment Archive', 'moderation') ?></h2>
             <?php
 			if ( empty( $cid ) && empty( $bid ) && empty( $email ) && empty( $ip ) && !isset( $_POST['search'] ) ) {
 			?>
-            <form name="post_archive" method="POST" action="moderation-admin.php?page=comment-archive">
+            <form name="post_archive" method="POST" action="admin.php?page=moderation-comment-archive">
             	<input type="hidden" name="search" value="search" />
                 <table class="form-table">
                 <tr valign="top">
-                <th scope="row"><?php _e('Comment ID') ?></th>
+                <th scope="row"><?php _e('Comment ID', 'moderation') ?></th>
                 <td><input type="text" name="cid" id="cid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Blog ID') ?></th>
+                <th scope="row"><?php _e('Blog ID', 'moderation') ?></th>
                 <td><input type="text" name="bid" id="bid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Blogname') ?></th>
+                <th scope="row"><?php _e('Blogname', 'moderation') ?></th>
                 <td><input type="text" name="blog_name" id="blog_name" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Username') ?></th>
+                <th scope="row"><?php _e('Username', 'moderation') ?></th>
                 <td><input type="text" name="user_login" id="user_login" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('User ID') ?></th>
+                <th scope="row"><?php _e('User ID', 'moderation') ?></th>
                 <td><input type="text" name="uid" id="uid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Email') ?></th>
+                <th scope="row"><?php _e('Email', 'moderation') ?></th>
                 <td><input type="text" name="user_email" id="user_email" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('IP') ?></th>
+                <th scope="row"><?php _e('IP', 'moderation') ?></th>
                 <td><input type="text" name="ip" id="ip" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 </table>
-            <p><?php _e('Note that only comments published after the moderation plugin was added will be available.'); ?></p>
+            <p><?php _e('Note that only comments published after the moderation plugin was added will be available.', 'moderation'); ?></p>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Search') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" /> 
             </p> 
             </form>
 			<?php
@@ -1925,16 +1945,16 @@ function moderation_comment_archive() {
                         //$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
                         
                         if( $start == 0 ) { 
-                            echo __('Previous Page');
+                            echo __('Previous Page', 'moderation');
                         } elseif( $start <= 30 ) { 
-                            echo '<a href="moderation-admin.php?page=comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+                            echo '<a href="admin.php?page=moderation-comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } else {
-                            echo '<a href="moderation-admin.php?page=comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+                            echo '<a href="admin.php?page=moderation-comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } 
                         if ( $next ) {
-                            echo '&nbsp;||&nbsp;<a href="moderation-admin.php?page=comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page') . '</a>';
+                            echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
                         } else {
-                            echo '&nbsp;||&nbsp;' . __('Next Page');
+                            echo '&nbsp;||&nbsp;' . __('Next Page', 'moderation');
                         }
                         ?>
                         </fieldset>
@@ -1945,10 +1965,10 @@ function moderation_comment_archive() {
                     <br />
                     <table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
                     <thead><tr>
-                    <th scope='col'>" . __('Blog') . "</th>
-                    <th scope='col'>" . __('Author') . "</th>
-                    <th scope='col'>" . __('Date/Time') . "</th>
-                    <th scope='col'>" . __('Actions') . "</th>
+                    <th scope='col'>" . __('Blog', 'moderation') . "</th>
+                    <th scope='col'>" . __('Author', 'moderation') . "</th>
+                    <th scope='col'>" . __('Date/Time', 'moderation') . "</th>
+                    <th scope='col'>" . __('Actions', 'moderation') . "</th>
                     </tr></thead>
                     <tbody id='the-list'>
                     ";
@@ -1977,10 +1997,10 @@ function moderation_comment_archive() {
 							$author = $author_email;
 						}
     
-                        echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='moderation-admin.php?page=comment-archive&bid=" . $comment['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive') . "</a>)</td>";
-                        echo "<td valign='top'>" . $author . " (<a href='moderation-admin.php?page=comment-archive&email=" . $author_email . "' rel='permalink' class='edit'>" . __('Archive') . "</a>)</td>";
+                        echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-comment-archive&bid=" . $comment['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
+                        echo "<td valign='top'>" . $author . " (<a href='admin.php?page=moderation-comment-archive&email=" . $author_email . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . date( $date_format . ' ' . $time_format, $comment['comment_stamp'] ) . "</td>";
-                        echo "<td valign='top'><a href='moderation-admin.php?page=comment-archive&action=view&comment_archive_id=" . $comment['comment_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&bid=" . $bid . "&uid=" . $uid . "&ip=" . $ip . "&email=" . $email . "&cid=" . $cid . "' rel='permalink' class='edit'>" . __('View') . "</a></td>";
+                        echo "<td valign='top'><a href='admin.php?page=moderation-comment-archive&action=view&comment_archive_id=" . $comment['comment_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&bid=" . $bid . "&uid=" . $uid . "&ip=" . $ip . "&email=" . $email . "&cid=" . $cid . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a></td>";
     
                         echo "</tr>";
                         $class = ('alternate' == $class) ? '' : 'alternate';
@@ -1992,7 +2012,7 @@ function moderation_comment_archive() {
                     <?php
                 } else {
                     ?>
-                    <p><?php _e('No comments found.') ?></p>
+                    <p><?php _e('No comments found.', 'moderation') ?></p>
                     <?php
                 }
 			}
@@ -2013,26 +2033,26 @@ function moderation_comment_archive() {
 				$author = $author_email;
 			}
 			?>
-        	<h2><?php __('View Comment'); ?></h2>
+        	<h2><?php __('View Comment', 'moderation'); ?></h2>
             <ul>
-            	<li><strong><?php _e('Blog'); ?>: </strong><a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a> (<a href="moderation-admin.php?page=comment-archive&bid=<?php echo $comment_details->blog_id; ?>" style="text-decoration:none;"><?php _e('Archive'); ?></a>)</li>
-            	<li><strong><?php _e('Author'); ?>: </strong><?php echo $author; ?>  (<a href="moderation-admin.php?page=comment-archive&email=<?php echo $author_email; ?>" style="text-decoration:none;"><?php _e('Archive'); ?></a>)</li>
-            	<li><strong><?php _e('Date/Time'); ?>: </strong><?php echo date( get_option('date_format') . ' ' . get_option('time_format'), $comment_details->comment_stamp ); ?></li>
+            	<li><strong><?php _e('Blog', 'moderation'); ?>: </strong><a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a> (<a href="admin.php?page=moderation-comment-archive&bid=<?php echo $comment_details->blog_id; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
+            	<li><strong><?php _e('Author', 'moderation'); ?>: </strong><?php echo $author; ?>  (<a href="admin.php?page=moderation-comment-archive&email=<?php echo $author_email; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
+            	<li><strong><?php _e('Date/Time', 'moderation'); ?>: </strong><?php echo date( get_option('date_format') . ' ' . get_option('time_format'), $comment_details->comment_stamp ); ?></li>
             </ul>
         	<p><?php echo stripslashes($comment_details->comment_content); ?></p>
             <?php
 			if ( !empty($_GET['start']) || !empty($_GET['num']) ) {
 				?>
-				<form name="comment_archive" method="POST" action="moderation-admin.php?page=comment-archive&start=<?php echo $_GET['start']; ?>&num=<?php echo $_GET['num']; ?>&&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&ip=<?php echo $_GET['ip']; ?>&email=<?php echo $_GET['email']; ?>&cid=<?php echo $_GET['cid']; ?>">
+				<form name="comment_archive" method="POST" action="admin.php?page=moderation-comment-archive&start=<?php echo $_GET['start']; ?>&num=<?php echo $_GET['num']; ?>&&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&ip=<?php echo $_GET['ip']; ?>&email=<?php echo $_GET['email']; ?>&cid=<?php echo $_GET['cid']; ?>">
                 <?php
 			} else {
 				?>
-            	<form name="comment_archive" method="POST" action="moderation-admin.php?page=comment-archive&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&ip=<?php echo $_GET['ip']; ?>&email=<?php echo $_GET['email']; ?>&cid=<?php echo $_GET['cid']; ?>">
+            	<form name="comment_archive" method="POST" action="admin.php?page=moderation-comment-archive&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&ip=<?php echo $_GET['ip']; ?>&email=<?php echo $_GET['email']; ?>&cid=<?php echo $_GET['cid']; ?>">
                 <?php
 			}
 			?>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Return') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Return', 'moderation') ?>" /> 
             </p> 
             </form>
     	    <?php
@@ -2053,7 +2073,7 @@ function moderation_report_archive() {
 	}
 	
 	if (isset($_GET['updated'])) {
-		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg'])) ?></p></div><?php
+		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
 	switch( $_GET[ 'action' ] ) {
@@ -2082,43 +2102,43 @@ function moderation_report_archive() {
 				$report_type = 'comment';
 			}
 			?>
-            <h2><?php _e('Report Archive') ?></h2>
+            <h2><?php _e('Report Archive', 'moderation') ?></h2>
             <?php
 			if ( empty( $report_type ) ) {
 			?>
-            <form name="report_archive" method="POST" action="moderation-admin.php?page=report-archive">
+            <form name="report_archive" method="POST" action="admin.php?page=moderation-report-archive">
                 <table class="form-table">
                 <tr valign="top"> 
-                <th scope="row"><?php _e('Report Type') ?></th> 
+                <th scope="row"><?php _e('Report Type', 'moderation') ?></th> 
                 <td><select name="report_type">
-                    <option value="post"><?php _e('Post'); ?></option>
-                    <option value="comment" ><?php _e('Comment'); ?></option>
-                    <option value="blog" ><?php _e('Blog'); ?></option>
-                    <option value="all" selected="selected" ><?php _e('All'); ?></option>
+                    <option value="post"><?php _e('Post', 'moderation'); ?></option>
+                    <option value="comment" ><?php _e('Comment', 'moderation'); ?></option>
+                    <option value="blog" ><?php _e('Blog', 'moderation'); ?></option>
+                    <option value="all" selected="selected" ><?php _e('All', 'moderation'); ?></option>
                 </select>
                 </td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Blog ID') ?></th>
+                <th scope="row"><?php _e('Blog ID', 'moderation') ?></th>
                 <td><input type="text" name="bid" id="bid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Post ID') ?></th>
+                <th scope="row"><?php _e('Post ID', 'moderation') ?></th>
                 <td><input type="text" name="pid" id="pid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 <tr valign="top">
-                <th scope="row"><?php _e('Comment ID') ?></th>
+                <th scope="row"><?php _e('Comment ID', 'moderation') ?></th>
                 <td><input type="text" name="cid" id="cid" style="width: 95%" value="" />
                 <br />
                 <?php //_e('') ?></td> 
                 </tr>
                 </table>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Search') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" /> 
             </p> 
             </form>
 			<?php
@@ -2169,16 +2189,16 @@ function moderation_report_archive() {
                         //$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
                         
                         if( $start == 0 ) { 
-                            echo __('Previous Page');
+                            echo __('Previous Page', 'moderation');
                         } elseif( $start <= 30 ) { 
-                            echo '<a href="moderation-admin.php?page=report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+                            echo '<a href="admin.php?page=moderation-report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } else {
-                            echo '<a href="moderation-admin.php?page=report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page') . '</a>';
+                            echo '<a href="admin.php?page=moderation-report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } 
                         if ( $next ) {
-                            echo '&nbsp;||&nbsp;<a href="moderation-admin.php?page=report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page') . '</a>';
+                            echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
                         } else {
-                            echo '&nbsp;||&nbsp;' . __('Next Page');
+                            echo '&nbsp;||&nbsp;' . __('Next Page', 'moderation');
                         }
                         ?>
                         </fieldset>
@@ -2189,12 +2209,12 @@ function moderation_report_archive() {
                     <br />
                     <table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
                     <thead><tr>
-                    <th scope='col'>" . __('Report Type') . "</th>
-					<th scope='col'>" . __('Report Reason') . "</th>
-					<th scope='col'>" . __('Report Status') . "</th>
-                    <th scope='col'>" . __('Blog') . "</th>
-                    <th scope='col'>" . __('Date/Time') . "</th>
-                    <th scope='col'>" . __('Actions') . "</th>
+                    <th scope='col'>" . __('Report Type', 'moderation') . "</th>
+					<th scope='col'>" . __('Report Reason', 'moderation') . "</th>
+					<th scope='col'>" . __('Report Status', 'moderation') . "</th>
+                    <th scope='col'>" . __('Blog', 'moderation') . "</th>
+                    <th scope='col'>" . __('Date/Time', 'moderation') . "</th>
+                    <th scope='col'>" . __('Actions', 'moderation') . "</th>
                     </tr></thead>
                     <tbody id='the-list'>
                     ";
@@ -2223,10 +2243,10 @@ function moderation_report_archive() {
                         echo "<td valign='top'>" . date( $date_format . ' ' . $time_format, $report['report_stamp'] ) . "</td>";
                         echo "<td valign='top'>";
 						if ( $report['report_object_type'] == 'post' ) {
-							echo "<a href='moderation-admin.php?page=post-archive&post_type=all&bid=" . $report['report_blog_ID'] . "&pid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View') . "</a>";
+							echo "<a href='admin.php?page=moderation-post-archive&post_type=all&bid=" . $report['report_blog_ID'] . "&pid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a>";
 						}
 						if ( $report['report_object_type'] == 'comment' ) {
-							echo "<a href='moderation-admin.php?page=comment-archive&bid=" . $report['report_blog_ID'] . "&cid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View') . "</a>";
+							echo "<a href='admin.php?page=moderation-comment-archive&bid=" . $report['report_blog_ID'] . "&cid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a>";
 						}
 						echo"</td>";
     
@@ -2240,7 +2260,7 @@ function moderation_report_archive() {
                     <?php
                 } else {
                     ?>
-                    <p><?php _e('No reports found.') ?></p>
+                    <p><?php _e('No reports found.', 'moderation') ?></p>
                     <?php
                 }
 			}
@@ -2257,14 +2277,14 @@ function moderation_warnings() {
 	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site;
 	
 	if (isset($_GET['updated'])) {
-		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg'])) ?></p></div><?php
+		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
 			?>
-            <h2><?php _e('Warnings') ?></h2>
+            <h2><?php _e('Warnings', 'moderation') ?></h2>
             <ul>
             <?php
 			$query = "SELECT warning_note FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_ID . "' AND warning_read = '0'";
@@ -2274,9 +2294,9 @@ function moderation_warnings() {
 			}
 			?>
             </ul>
-            <form name="accept" method="POST" action="warning.php?action=accept">
+            <form name="accept" method="POST" action="admin.php?page=moderation-warning&action=accept">
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Accept') ?>" /> 
+            <input type="submit" name="Submit" value="<?php _e('Accept', 'moderation') ?>" /> 
             </p> 
             </form>
             <?php
@@ -2286,7 +2306,7 @@ function moderation_warnings() {
 			$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_warnings SET warning_read = '1' WHERE warning_user_ID = '" . $user_ID . "'" );
 
 			echo "
-			<SCRIPT LANGUAGE='JavaScript'>
+			<SCRIPT LANGUAGE='javascript'>
 			window.location='index.php';
 			</script>
 			";
@@ -2304,4 +2324,12 @@ function moderation_roundup($value, $dp){
     return ceil($value*pow(10, $dp))/pow(10, $dp);
 }
 
-?>
+if ( !function_exists( 'wdp_un_check' ) ) {
+	add_action( 'admin_notices', 'wdp_un_check', 5 );
+	add_action( 'network_admin_notices', 'wdp_un_check', 5 );
+
+	function wdp_un_check() {
+		if ( !class_exists( 'WPMUDEV_Update_Notifications' ) && current_user_can( 'edit_users' ) )
+			echo '<div class="error fade"><p>' . __('Please install the latest version of <a href="http://premium.wpmudev.org/project/update-notifications/" title="Download Now &raquo;">our free Update Notifications plugin</a> which helps you stay up-to-date with the most stable, secure versions of WPMU DEV themes and plugins. <a href="http://premium.wpmudev.org/wpmu-dev/update-notifications-plugin-information/">More information &raquo;</a>', 'wpmudev') . '</a></p></div>';
+	}
+}
