@@ -42,6 +42,7 @@ if ($_GET['key'] == '' || $_GET['key'] === ''){
 }
 add_action('init', 'moderation_init');
 add_action('admin_menu', 'moderation_plug_pages');
+add_action('network_admin_menu', 'moderation_plug_pages');
 add_action('wpmu_options', 'moderation_site_admin_options');
 add_action('update_wpmu_options', 'moderation_site_admin_options_process');
 add_action('wp_print_scripts', 'moderation_print_scripts');
