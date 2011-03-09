@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
-Version: 1.0.2
+Version: 1.0.3
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
@@ -334,10 +334,15 @@ function moderation_process_submission() {
 		$user_email = $wpdb->get_var("SELECT user_email FROM " . $wpdb->users . " WHERE ID = '" . $user_ID . "'");
 	}
 	
+	$post_type = $wpdb->escape($_POST['object_type']);
+	$post_id = $wpdb->escape($_POST['object_id']);
+	$report_reason = $wpdb->escape($_POST['report_reason']);
+	$report_note = $wpdb->escape($_POST['report_note']);
+	
 	$wpdb->query("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_reports
 	(report_blog_ID, report_object_type, report_object_ID, report_reason, report_note, report_user_ID, report_user_email, report_user_IP, report_stamp, report_date, report_date_gmt)
 	VALUES
-	('" . $wpdb->blogid . "', '" . $_POST['object_type'] . "', '" . $_POST['object_id'] . "', '" . $_POST['report_reason'] . "', '" . $_POST['report_note'] . "', '" . $user_ID . "', '" . $user_email . "', '" . $_SERVER['REMOTE_ADDR'] . "', '" . time() . "', '" . current_time('mysql') . "', '" . get_gmt_from_date( current_time('mysql') ) . "')");
+	('" . $wpdb->blogid . "', '" . $post_type . "', '" . $post_id . "', '" . $report_reason . "', '" . $report_note . "', '" . $user_ID . "', '" . $user_email . "', '" . $_SERVER['REMOTE_ADDR'] . "', '" . time() . "', '" . current_time('mysql') . "', '" . get_gmt_from_date( current_time('mysql') ) . "')");
 }
 
 function moderation_report_link($object_type, $object_id) {
@@ -1189,13 +1194,13 @@ function moderation_blogs() {
 					$query = "SELECT report_reason, report_note FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'blog' AND report_status = 'new' AND report_blog_ID = '" . $report['report_blog_ID'] . "' AND report_object_ID = '" . $report['report_object_ID'] . "' ORDER BY report_stamp DESC";
 					$reasons = $wpdb->get_results( $query, ARRAY_A );
 
-					echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (" . $blog_details->siteurl . ")</td>";
+					echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . stripslashes($blog_details->blogname) . "</a> (" . $blog_details->siteurl . ")</td>";
 					echo "<td valign='top'>" . date( $date_format . ' ' . $time_format, $report['report_stamp'] ) . "</td>";
 					echo "<td valign='top'>";
 					foreach ( $reasons as $reason ) {
-						echo $reason['report_reason'];
+						echo stripslashes($reason['report_reason']);
 						if ( !empty( $reason['report_note'] ) ) {
-							echo " - " . $reason['report_note'];
+							echo " - " . stripslashes($reason['report_note']);
 						}
 						echo "<br />";
 					}
