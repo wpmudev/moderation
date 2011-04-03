@@ -423,7 +423,7 @@ function moderation_site_admin_users_column_content($column,$uid) {
 
 function moderation_report_post($content){
 	global $post, $wpdb;
-	if ( $wpdb->blogid != 1 && !is_search() ) {
+	if ( $wpdb->blogid != BLOG_ID_CURRENT_SITE && !is_search() ) {
 		$link = moderation_report_link('post', $post->ID);
 	}
 	return $content . $link;
@@ -431,7 +431,7 @@ function moderation_report_post($content){
 
 function moderation_report_comment($content){
 	global $comment, $wpdb;
-	if ( $wpdb->blogid != 1 ) {
+	if ( $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
 		$link = moderation_report_link('comment', $comment->comment_ID);
 	}
 	return $content . $link;
@@ -439,7 +439,7 @@ function moderation_report_comment($content){
 
 function moderation_report_blog(){
 	global $wpdb;
-	if ( $wpdb->blogid != 1 ) {
+	if ( $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
 		echo moderation_report_link('blog', $wpdb->blogid);
 	}
 }
