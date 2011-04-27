@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
-Version: 1.0.3
+Version: 1.0.5
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
@@ -27,7 +27,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-$moderation_current_version = '1.0.1';
+$moderation_current_version = '1.0.5';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
 //------------------------------------------------------------------------//
@@ -423,7 +423,7 @@ function moderation_site_admin_users_column_content($column,$uid) {
 
 function moderation_report_post($content){
 	global $post, $wpdb;
-	if ( $wpdb->blogid != BLOG_ID_CURRENT_SITE && !is_search() ) {
+	if ( !WP_ADMIN && $wpdb->blogid != BLOG_ID_CURRENT_SITE && !is_search() ) {
 		$link = moderation_report_link('post', $post->ID);
 	}
 	return $content . $link;
@@ -431,7 +431,7 @@ function moderation_report_post($content){
 
 function moderation_report_comment($content){
 	global $comment, $wpdb;
-	if ( $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
+	if ( !WP_ADMIN && $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
 		$link = moderation_report_link('comment', $comment->comment_ID);
 	}
 	return $content . $link;
@@ -439,7 +439,7 @@ function moderation_report_comment($content){
 
 function moderation_report_blog(){
 	global $wpdb;
-	if ( $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
+	if ( !WP_ADMIN && $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
 		echo moderation_report_link('blog', $wpdb->blogid);
 	}
 }
