@@ -9,6 +9,7 @@ Change Log:
 ----------------------------------------------------------------------
 - Switch to is_admin() from WP_ADMIN
 - Localization improvements
+- Hide moderation warning if not applicable
 
 1.0.4 - 04/28/2011
 ----------------------------------------------------------------------

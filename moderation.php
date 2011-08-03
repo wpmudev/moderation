@@ -223,7 +223,9 @@ function moderation_plug_pages() {
 		add_submenu_page('moderation', __('Report Archive', 'moderation'), __('Report Archive', 'moderation'), '0', 'moderation-report-archive', 'moderation_report_archive' );
 		add_submenu_page('moderation', __('Post Archive', 'moderation'), __('Post Archive', 'moderation'), '0', 'moderation-post-archive', 'moderation_post_archive' );
 		add_submenu_page('moderation', __('Comment Archive', 'moderation'), __('Comment Archive', 'moderation'), '0', 'moderation-comment-archive', 'moderation_comment_archive' );
-		
+	}
+	
+	if ($wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_ID . "' AND warning_read = '0'") > 0) {
 		add_menu_page(__('Moderation Warning', 'moderation'), __('Moderation Warning', 'moderation'), 0, 'moderation-warning', 'moderation_warnings');
 	}
 }
