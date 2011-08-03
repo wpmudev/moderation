@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
-Version: 1.0.4
+Version: 1.0.5
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
@@ -27,7 +27,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-$moderation_current_version = '1.0.4';
+$moderation_current_version = '1.0.5';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
 //------------------------------------------------------------------------//
@@ -94,8 +94,6 @@ function moderation_make_current() {
 
 function moderation_blog_install() {
 	global $wpdb, $moderation_current_version;
-	//$moderation_table1 = "";
-	//$wpdb->query( $moderation_table1 );
 }
 
 function moderation_global_install() {
@@ -347,7 +345,13 @@ function moderation_process_submission() {
 
 function moderation_report_link($object_type, $object_id) {
 	global $post;
-	$link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="Report this ' . $object_type . '">' . __('Report This ' . ucfirst($object_type) , 'moderation') . '</a></p>';
+	
+	$link = "";
+	
+	if ($object_type == 'post') $link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="'. __('Report This Post', 'moderation') . '">' . __('Report This Post' , 'moderation') . '</a></p>';
+	if ($object_type == 'comment') $link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="'. __('Report This Comment', 'moderation') . '">' . __('Report This Comment' , 'moderation') . '</a></p>';
+	if ($object_type == 'blog') $link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="'. __('Report This Blog', 'moderation') . '">' . __('Report This Blog' , 'moderation') . '</a></p>';awurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="Report this ' . $object_type . '">' . __('Report This ' . ucfirst($object_type) , 'moderation') . '</a></p>';
+	
 	return $link;
 }
 
@@ -423,7 +427,7 @@ function moderation_site_admin_users_column_content($column,$uid) {
 
 function moderation_report_post($content){
 	global $post, $wpdb;
-	if ( !WP_ADMIN && $wpdb->blogid != BLOG_ID_CURRENT_SITE && !is_search() ) {
+	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE && !is_search() ) {
 		$link = moderation_report_link('post', $post->ID);
 	}
 	return $content . $link;
@@ -431,7 +435,7 @@ function moderation_report_post($content){
 
 function moderation_report_comment($content){
 	global $comment, $wpdb;
-	if ( !WP_ADMIN && $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
+	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
 		$link = moderation_report_link('comment', $comment->comment_ID);
 	}
 	return $content . $link;
@@ -439,7 +443,7 @@ function moderation_report_comment($content){
 
 function moderation_report_blog(){
 	global $wpdb;
-	if ( !WP_ADMIN && $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
+	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
 		echo moderation_report_link('blog', $wpdb->blogid);
 	}
 }
@@ -455,7 +459,7 @@ function moderation_head() {
 	var moderation_ajaxurl = "<?php echo get_option('siteurl'); ?>/";
 	function moderation_submit() {
 		jQuery('#moderation-report').load( moderation_ajaxurl, jQuery('form#moderation-report-form').serializeArray(), function() {
-			jQuery('#moderation-report').append('<p>Press ESC or click anywhere outside this box to close it.</p>');
+			jQuery('#moderation-report').append('<p><?php  _e('Press ESC or click anywhere outside this box to close it', 'moderation')?>.</p>');
 		} );
 		return false;
 	}
@@ -1008,7 +1012,7 @@ function moderation_posts() {
 					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&post_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
 					echo "<strong>" . __('Report Date/Time', 'moderation') . "</strong>:<br />";
-					echo date( $date_format . ' ' . $time_format, $report['report_stamp'] );
+					echo date_i18n( $date_format . ' ' . $time_format, $report['report_stamp'] );
 					echo "<br /><br />";
 					echo "<strong>" . __('Reason(s)', 'moderation') . "</strong>:<br />";
 					foreach ( $reasons as $reason ) {
@@ -1195,7 +1199,7 @@ function moderation_blogs() {
 					$reasons = $wpdb->get_results( $query, ARRAY_A );
 
 					echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . stripslashes($blog_details->blogname) . "</a> (" . $blog_details->siteurl . ")</td>";
-					echo "<td valign='top'>" . date( $date_format . ' ' . $time_format, $report['report_stamp'] ) . "</td>";
+					echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $report['report_stamp'] ) . "</td>";
 					echo "<td valign='top'>";
 					foreach ( $reasons as $reason ) {
 						echo stripslashes($reason['report_reason']);
@@ -1379,7 +1383,7 @@ function moderation_comments() {
 					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-comment-archive&post_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
 					echo "<strong>" . __('Report Date/Time', 'moderation') . "</strong>:<br />";
-					echo date( $date_format . ' ' . $time_format, $report['report_stamp'] );
+					echo date_i18n( $date_format . ' ' . $time_format, $report['report_stamp'] );
 					echo "<br /><br />";
 					echo "<strong>" . __('Reason(s)', 'moderation') . "</strong>:<br />";
 					foreach ( $reasons as $reason ) {
@@ -1711,7 +1715,7 @@ function moderation_post_archive() {
                         echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&post_type=" . $post_type . "&bid=" . $post['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . $author_user_login . " (<a href='admin.php?page=moderation-post-archive&post_type=" . $post_type . "&uid=" . $post['post_author'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . stripslashes( $post['post_title'] ) . "</td>";
-                        echo "<td valign='top'>" . date( $date_format . ' ' . $time_format, $post['post_stamp'] ) . "</td>";
+                        echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $post['post_stamp'] ) . "</td>";
                         echo "<td valign='top'>" . ucfirst( $post['post_type'] ) . "</td>";
                         echo "<td valign='top'><a href='admin.php?page=moderation-post-archive&action=view&post_archive_id=" . $post['post_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&post_type=" . $post_type . "&bid=" . $bid . "&uid=" . $uid . "&pid=" . $pid . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a></td>";
     
@@ -1740,7 +1744,7 @@ function moderation_post_archive() {
             <ul>
             	<li><strong><?php _e('Blog', 'moderation'); ?>: </strong><a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a> (<a href="admin.php?page=moderation-post-archive&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $post_details->blog_id; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
             	<li><strong><?php _e('Author', 'moderation'); ?>: </strong><?php echo $author_user_login; ?>  (<a href="admin.php?page=moderation-post-archive&post_type=<?php echo $_GET['post_type']; ?>&uid=<?php echo $post_details->post_author; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
-            	<li><strong><?php _e('Date/Time', 'moderation'); ?>: </strong><?php echo date( get_option('date_format') . ' ' . get_option('time_format'), $post_details->post_stamp ); ?></li>
+            	<li><strong><?php _e('Date/Time', 'moderation'); ?>: </strong><?php echo date_i18n( get_option('date_format') . ' ' . get_option('time_format'), $post_details->post_stamp ); ?></li>
             </ul>
         	<p><?php echo stripslashes($post_details->post_content); ?></p>
             <?php
@@ -2005,7 +2009,7 @@ function moderation_comment_archive() {
     
                         echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-comment-archive&bid=" . $comment['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . $author . " (<a href='admin.php?page=moderation-comment-archive&email=" . $author_email . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
-                        echo "<td valign='top'>" . date( $date_format . ' ' . $time_format, $comment['comment_stamp'] ) . "</td>";
+                        echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $comment['comment_stamp'] ) . "</td>";
                         echo "<td valign='top'><a href='admin.php?page=moderation-comment-archive&action=view&comment_archive_id=" . $comment['comment_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&bid=" . $bid . "&uid=" . $uid . "&ip=" . $ip . "&email=" . $email . "&cid=" . $cid . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a></td>";
     
                         echo "</tr>";
@@ -2043,7 +2047,7 @@ function moderation_comment_archive() {
             <ul>
             	<li><strong><?php _e('Blog', 'moderation'); ?>: </strong><a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a> (<a href="admin.php?page=moderation-comment-archive&bid=<?php echo $comment_details->blog_id; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
             	<li><strong><?php _e('Author', 'moderation'); ?>: </strong><?php echo $author; ?>  (<a href="admin.php?page=moderation-comment-archive&email=<?php echo $author_email; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
-            	<li><strong><?php _e('Date/Time', 'moderation'); ?>: </strong><?php echo date( get_option('date_format') . ' ' . get_option('time_format'), $comment_details->comment_stamp ); ?></li>
+            	<li><strong><?php _e('Date/Time', 'moderation'); ?>: </strong><?php echo date_i18n( get_option('date_format') . ' ' . get_option('time_format'), $comment_details->comment_stamp ); ?></li>
             </ul>
         	<p><?php echo stripslashes($comment_details->comment_content); ?></p>
             <?php
@@ -2246,7 +2250,7 @@ function moderation_report_archive() {
 						echo "<td valign='top'>" . ucfirst( $report['report_status'] ) . "</td>";
 						echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (" . $blog_details->siteurl . ")</td>";
 						
-                        echo "<td valign='top'>" . date( $date_format . ' ' . $time_format, $report['report_stamp'] ) . "</td>";
+                        echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $report['report_stamp'] ) . "</td>";
                         echo "<td valign='top'>";
 						if ( $report['report_object_type'] == 'post' ) {
 							echo "<a href='admin.php?page=moderation-post-archive&post_type=all&bid=" . $report['report_blog_ID'] . "&pid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a>";
@@ -2336,6 +2340,6 @@ if ( !function_exists( 'wdp_un_check' ) ) {
 
 	function wdp_un_check() {
 		if ( !class_exists( 'WPMUDEV_Update_Notifications' ) && current_user_can( 'edit_users' ) )
-			echo '<div class="error fade"><p>' . __('Please install the latest version of <a href="http://premium.wpmudev.org/project/update-notifications/" title="Download Now &raquo;">our free Update Notifications plugin</a> which helps you stay up-to-date with the most stable, secure versions of WPMU DEV themes and plugins. <a href="http://premium.wpmudev.org/wpmu-dev/update-notifications-plugin-information/">More information &raquo;</a>', 'wpmudev') . '</a></p></div>';
+			echo '<div class="error fade"><p>' . __('Please install the latest version of <a href="http://premium.wpmudev.org/project/update-notifications/" title="Download Now &raquo;">our free Update Notifications plugin</a> which helps you stay up-to-date with the most stable, secure versions of WPMU DEV themes and plugins. <a href="http://premium.wpmudev.org/wpmu-dev/update-notifications-plugin-information/">More information &raquo;</a>', 'moderation') . '</a></p></div>';
 	}
 }
