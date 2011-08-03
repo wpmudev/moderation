@@ -450,7 +450,7 @@ function moderation_head() {
 	wp_print_styles(array('thickbox_css'));
 	?>
 	<script type="text/javascript">
-	var tb_pathToImage = "<? echo get_option('siteurl') . '/' . WPINC; ?>/js/thickbox/loadingAnimation.gif";
+	var tb_pathToImage = "<?php echo get_option('siteurl') . '/' . WPINC; ?>/js/thickbox/loadingAnimation.gif";
 	var tb_closeImage = "<?php echo get_option('siteurl') . '/' . WPINC; ?>/js/thickbox/tb-close.png";
 	var moderation_ajaxurl = "<?php echo get_option('siteurl'); ?>/";
 	function moderation_submit() {
