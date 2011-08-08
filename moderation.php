@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
-Version: 1.0.5
+Version: 1.0.6
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
