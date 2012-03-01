@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
-Version: 1.0.6
+Version: 1.0.7
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
@@ -27,17 +27,25 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-$moderation_current_version = '1.0.5';
+$moderation_current_version = '1.0.7';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
 //------------------------------------------------------------------------//
 
-$moderation_save_to_archive = 'all'; //Either 'all' or 'removed'
+if ( !isset( $moderation_save_to_archive )) 
+    $moderation_save_to_archive = 'all'; //Either 'all' or 'removed'
+
+if ( !isset( $moderation_use_filters ))
+    $moderation_use_filters = array(
+        'post'      => true, 
+        'comment'   => true,
+        'blog'      => true,
+    );
 
 //------------------------------------------------------------------------//
 //---Hook-----------------------------------------------------------------//
 //------------------------------------------------------------------------//
-if ($_GET['key'] == '' || $_GET['key'] === ''){
+if (!isset($_GET['key']) || $_GET['key'] == '' || $_GET['key'] === ''){
 	add_action('admin_head', 'moderation_make_current');
 }
 add_action('init', 'moderation_init');
@@ -47,17 +55,20 @@ add_action('wpmu_options', 'moderation_site_admin_options');
 add_action('update_wpmu_options', 'moderation_site_admin_options_process');
 add_action('wp_print_scripts', 'moderation_print_scripts');
 add_action('wp_head','moderation_head');
-add_filter('the_content', 'moderation_report_post', 20, 1);
+if ( $moderation_use_filters['post'] === true ) 
+    add_filter('the_content', 'moderation_post_filter', 20, 1);
 if ( $moderation_save_to_archive == 'all' ) {
 	add_action('save_post', 'moderation_post_archive_insert');
 	add_action('comment_post', 'moderation_comment_archive_insert');
 }
 add_action('admin_footer', 'moderation_warnings_check');
-add_filter('wp_footer', 'moderation_report_blog');
+if ( $moderation_use_filters['blog'] === true )
+    add_filter('wp_footer', 'moderation_blog_filter');
 add_action('delete_post', 'moderation_post_delete');
 add_action('delete_blog', 'moderation_blog_delete', 10, 1);
 add_action('delete_comment', 'moderation_comment_delete');
-add_filter('get_comment_text', 'moderation_report_comment', 20, 1);
+if ( $moderation_use_filters['comment'] === true )
+    add_filter('get_comment_text', 'moderation_comment_filter', 20, 1);
 add_filter('wpmu_users_columns', 'moderation_site_admin_users_column_header');
 add_action('manage_users_custom_column','moderation_site_admin_users_column_content', 1, 2);
 add_filter('admin_menu', 'moderation_hook_admin_menu');
@@ -173,7 +184,7 @@ function is_moderator( $user_login = false ) {
 	if ( !$current_user && !$user_login ) {
 		return false;
 	}
-	if ( is_site_admin( $user_login ) ) {
+	if ( is_super_admin( $user_login ) ) {
 		return true;
 	}
 	if ( $user_login ) {
@@ -190,7 +201,7 @@ function is_moderator( $user_login = false ) {
 }
 
 function moderation_plug_pages() {
-	global $wpdb;
+	global $wpdb, $user_id;
 	if ( is_moderator() ) {
 		$post_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'post' AND report_status = 'new'");
 		$blog_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'blog' AND report_status = 'new'");
@@ -216,17 +227,17 @@ function moderation_plug_pages() {
 		} else {
 			$total_count = '';
 		}
-		add_menu_page(__('Moderation', 'moderation'), __('Moderation', 'moderation') . $total_count, 0, 'moderation', 'moderation_overview');
-		add_submenu_page('moderation', __('Blog Moderation', 'moderation'), __('Blogs', 'moderation') . $blog_count, '0', 'moderation-blogs', 'moderation_blogs' );
-		add_submenu_page('moderation', __('Post Moderation', 'moderation'), __('Posts', 'moderation') . $post_count, '0', 'moderation-posts', 'moderation_posts' );
-		add_submenu_page('moderation', __('Comment Moderation', 'moderation'), __('Comments', 'moderation') . $comment_count, '0', 'moderation-comments', 'moderation_comments' );
-		add_submenu_page('moderation', __('Report Archive', 'moderation'), __('Report Archive', 'moderation'), '0', 'moderation-report-archive', 'moderation_report_archive' );
-		add_submenu_page('moderation', __('Post Archive', 'moderation'), __('Post Archive', 'moderation'), '0', 'moderation-post-archive', 'moderation_post_archive' );
-		add_submenu_page('moderation', __('Comment Archive', 'moderation'), __('Comment Archive', 'moderation'), '0', 'moderation-comment-archive', 'moderation_comment_archive' );
+		add_menu_page(__('Moderation', 'moderation'), __('Moderation', 'moderation') . $total_count, 'read', 'moderation', 'moderation_overview');
+		add_submenu_page('moderation', __('Blog Moderation', 'moderation'), __('Blogs', 'moderation') . $blog_count, 'read', 'moderation-blogs', 'moderation_blogs' );
+		add_submenu_page('moderation', __('Post Moderation', 'moderation'), __('Posts', 'moderation') . $post_count, 'read', 'moderation-posts', 'moderation_posts' );
+		add_submenu_page('moderation', __('Comment Moderation', 'moderation'), __('Comments', 'moderation') . $comment_count, 'read', 'moderation-comments', 'moderation_comments' );
+		add_submenu_page('moderation', __('Report Archive', 'moderation'), __('Report Archive', 'moderation'), 'read', 'moderation-report-archive', 'moderation_report_archive' );
+		add_submenu_page('moderation', __('Post Archive', 'moderation'), __('Post Archive', 'moderation'), 'read', 'moderation-post-archive', 'moderation_post_archive' );
+		add_submenu_page('moderation', __('Comment Archive', 'moderation'), __('Comment Archive', 'moderation'), 'read', 'moderation-comment-archive', 'moderation_comment_archive' );
 	}
 	
-	if ($wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_ID . "' AND warning_read = '0'") > 0) {
-		add_menu_page(__('Moderation Warning', 'moderation'), __('Moderation Warning', 'moderation'), 0, 'moderation-warning', 'moderation_warnings');
+	if ($wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_id . "' AND warning_read = '0'") > 0) {
+		add_menu_page(__('Moderation Warning', 'moderation'), __('Moderation Warning', 'moderation'), 'read', 'moderation-warning', 'moderation_warnings');
 	}
 }
 
@@ -328,7 +339,10 @@ function moderation_init() {
 function moderation_process_submission() {
 	global $wpdb, $user_ID;
 	
-	$user_email = $_POST['report_author_email'];
+	$user_email = '';
+	if (isset($_POST['report_author_email'])) {
+		$user_email = $_POST['report_author_email'];
+	}
 	
 	if ( empty( $user_email ) && !empty( $user_ID ) ) {
 		$user_email = $wpdb->get_var("SELECT user_email FROM " . $wpdb->users . " WHERE ID = '" . $user_ID . "'");
@@ -345,16 +359,60 @@ function moderation_process_submission() {
 	('" . $wpdb->blogid . "', '" . $post_type . "', '" . $post_id . "', '" . $report_reason . "', '" . $report_note . "', '" . $user_ID . "', '" . $user_email . "', '" . $_SERVER['REMOTE_ADDR'] . "', '" . time() . "', '" . current_time('mysql') . "', '" . get_gmt_from_date( current_time('mysql') ) . "')");
 }
 
-function moderation_report_link($object_type, $object_id) {
-	global $post;
-	
-	$link = "";
-	
-	if ($object_type == 'post') $link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="'. __('Report This Post', 'moderation') . '">' . __('Report This Post' , 'moderation') . '</a></p>';
-	if ($object_type == 'comment') $link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="'. __('Report This Comment', 'moderation') . '">' . __('Report This Comment' , 'moderation') . '</a></p>';
-	if ($object_type == 'blog') $link = '<p class="wp-report-this"><a href="' . get_option( 'siteurl') . '?moderation_action=report_form&object_type=' . rawurlencode( $object_type ) . '&object_id=' . rawurlencode(  $object_id ) . '&width=250&height=300" class="thickbox" title="'. __('Report This Blog', 'moderation') . '">' . __('Report This Blog' , 'moderation') . '</a></p>';
-	
-	return $link;
+function moderation_report_link($object_type, $object_id, $link_text = '', $link_atts = array()) {
+    // Set default attribute values, which also support user defined atts
+    // relly on wordpress to do the url parameter filtering (shortcode_atts)
+    $default_atts = array_merge( 
+        array_fill_keys( array_keys( (array) $link_atts ), '' ),
+        array( 'tag'   => 'p', 'class' => 'wp-report-this' ));
+    $link_atts = shortcode_atts( $default_atts, (array) $link_atts );
+    
+    // Evaluate $object_type and determin the value of the link's title
+    switch ($object_type) {
+        case 'blog':
+            $link_text = !empty($link_text)
+                ? __($link_text , 'moderation') 
+                : __('Report This Blog' , 'moderation');
+            break;
+        
+        case 'post':
+            $link_text = !empty($link_text)
+                ? __($link_text , 'moderation') 
+                : __('Report This Post', 'moderation');
+            break;
+        
+        case 'comment':
+            $link_text = !empty($link_text)
+                ? __($link_text , 'moderation') 
+                : __('Report This Comment', 'moderation');
+            break;
+        
+        default:
+            // Bail out if object_type was not recognised
+            return '';
+    }
+
+    // Construct moderation URL and the link itself (consider local arg_separator.output)
+    $link_url = get_option( 'siteurl') . '?' . http_build_query( array(
+        'moderation_action' => 'report_form',
+        'object_type'       => $object_type,
+        'object_id'         => $object_id,
+        'width'             => 250,
+        'height'            => 300,
+    ));
+    $link = '<a href="' . $link_url . '" class="thickbox" title="' . $link_text . '">' . $link_text . '</a>';
+
+    // Construct HTML container tag
+    $tag = $link_atts['tag'];
+    unset($link_atts['tag']);
+
+    // Construct HTML container atts
+    $tag_atts = '';
+    foreach ($link_atts as $att_name => $att_value) {
+        $tag_atts .= " {$att_name}=\"{$att_value}\"";
+    }
+    
+    return "<{$tag}{$tag_atts}>{$link}</{$tag}>";
 }
 
 function moderation_post_archive_insert($post_ID) {
@@ -427,25 +485,56 @@ function moderation_site_admin_users_column_content($column,$uid) {
 //---Output Functions-----------------------------------------------------//
 //------------------------------------------------------------------------//
 
-function moderation_report_post($content){
-	global $post, $wpdb;
-	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE && !is_search() ) {
+function moderation_report_post($link_text = '', $link_atts = array()){
+	global $post, $moderation_use_filters;
+    $moderation_use_filters['post'] = false;
+    if (!is_array($link_atts)) $link_atts = array('tag' => (string) $link_atts);
+    return moderation_report_link('post', $post->ID, $link_text, $link_atts);
+}
+
+function moderation_report_comment($link_text = '', $link_atts = array()){
+	global $comment, $moderation_use_filters;
+	
+    $moderation_use_filters['comment'] = false;
+    if (!is_array($link_atts)) {
+		$link_atts = array('tag' => (string) $link_atts);
+	}
+    return moderation_report_link('comment', $comment->comment_ID, $link_text, $link_atts);
+}
+
+function moderation_report_blog($link_text = '', $link_atts = array()){
+	global $wpdb, $moderation_use_filters;
+	
+    $moderation_use_filters['blog'] = false;
+    if (!is_array($link_atts)) {
+		$link_atts = array('tag' => (string) $link_atts);
+	}
+    return moderation_report_link('blog', $wpdb->blogid, $link_text, $link_atts);
+}
+
+function moderation_post_filter($content){
+	global $post, $wpdb, $moderation_use_filters;
+	
+	$link = '';
+	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE && !is_search() && $moderation_use_filters['post'] === true) {
 		$link = moderation_report_link('post', $post->ID);
 	}
 	return $content . $link;
 }
 
-function moderation_report_comment($content){
-	global $comment, $wpdb;
-	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
+function moderation_comment_filter($content){
+	global $comment, $wpdb, $moderation_use_filters;
+	
+	$link = '';
+	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE && $moderation_use_filters['comment'] === true) {
 		$link = moderation_report_link('comment', $comment->comment_ID);
 	}
 	return $content . $link;
 }
 
-function moderation_report_blog(){
-	global $wpdb;
-	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE ) {
+function moderation_blog_filter(){
+    global $wpdb, $moderation_use_filters;
+	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE && $moderation_use_filters['blog'] === true) {
 		echo moderation_report_link('blog', $wpdb->blogid);
 	}
 }
@@ -556,6 +645,8 @@ function moderation_report_form($ot, $oi) {
 	if ( $ot == 'blog' ) {
 		$reasons = get_site_option('moderation_report_blog_reasons', array('Spam','Language'));
 	}
+	
+	$output = '';
 
 	$output .= '<div id="moderation-report">';
 	$output .= '<form id="moderation-report-form" action="' . get_option('siteurl') . '" onsubmit="return moderation_submit();" method="post">';
@@ -594,6 +685,9 @@ function moderation_overview() {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
+	if (!isset($_GET[ 'action' ])) {
+		$_GET[ 'action' ] = '';
+	}
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
@@ -915,6 +1009,9 @@ function moderation_posts() {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
+	if (!isset($_GET[ 'action' ])) {
+		$_GET[ 'action' ] = '';
+	}
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
@@ -979,7 +1076,7 @@ function moderation_posts() {
 				<tbody id='the-list'>
 				";
 				//=========================================================//
-					$class = ('alternate' == $class) ? '' : 'alternate';
+					$class = (isset($class) && 'alternate' == $class) ? '' : 'alternate';
 					$date_format = get_option('date_format');
 					$time_format = get_option('time_format');
 					foreach ($reports as $report){
@@ -1119,6 +1216,9 @@ function moderation_blogs() {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
+	if (!isset($_GET[ 'action' ])) {
+		$_GET[ 'action' ] = '';
+	}
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
@@ -1185,7 +1285,7 @@ function moderation_blogs() {
 				<tbody id='the-list'>
 				";
 				//=========================================================//
-					$class = ('alternate' == $class) ? '' : 'alternate';
+					$class = (isset($class) && 'alternate' == $class) ? '' : 'alternate';
 					$date_format = get_option('date_format');
 					$time_format = get_option('time_format');
 					foreach ($reports as $report){
@@ -1256,7 +1356,7 @@ function moderation_blogs() {
 			}
 		echo "
 		<SCRIPT LANGUAGE='JavaScript'>
-		window.location='admin.php?page=moderation-posts&updated=true&updatedmsg=" . urlencode(__('Reports Processed.', 'moderation')) . "';
+		window.location='admin.php?page=moderation-blogs&updated=true&updatedmsg=" . urlencode(__('Reports Processed.', 'moderation')) . "';
 		</script>
 		";
 		break;
@@ -1279,6 +1379,9 @@ function moderation_comments() {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
+	if (!isset($_GET[ 'action' ])) {
+		$_GET[ 'action' ] = '';
+	}
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
@@ -1343,7 +1446,7 @@ function moderation_comments() {
 				<tbody id='the-list'>
 				";
 				//=========================================================//
-					$class = ('alternate' == $class) ? '' : 'alternate';
+					$class = (isset($class) && 'alternate' == $class) ? '' : 'alternate';
 					$date_format = get_option('date_format');
 					$time_format = get_option('time_format');
 					foreach ($reports as $report){
@@ -1502,35 +1605,52 @@ function moderation_post_archive() {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
+	if (!isset($_GET[ 'action' ])) {
+		$_GET[ 'action' ] = '';
+	}
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
-			$pid = $_POST['pid'];
-			if ( empty( $pid ) ) {
+			if (isset($_POST['pid'])) {
+				$pid = $_POST['pid'];
+			}
+			if ( empty( $pid ) && isset($_GET['pid']) ) {
 				$pid = $_GET['pid'];
 			}
-			$bid = $_POST['bid'];
-			if ( empty( $bid ) ) {
+			if (isset($_POST['bid'])) {
+				$bid = $_POST['bid'];
+			}
+			if ( empty( $bid ) && isset($_GET['bid']) ) {
 				$bid = $_GET['bid'];
 			}
-			$blog_name = $_POST['blog_name'];
-			if ( empty( $blog_name ) ) {
+			if (isset($_POST['blog_name'])) {
+				$blog_name = $_POST['blog_name'];
+			}
+			if ( empty( $blog_name ) && isset($_GET['blog_name']) ) {
 				$blog_name = $_GET['blog_name'];
 			}
-			$uid = $_POST['uid'];
-			if ( empty( $uid ) ) {
+			if (isset($_POST['uid'])) {
+				$uid = $_POST['uid'];
+			}
+			if ( empty( $uid ) && isset($_GET['uid']) ) {
 				$uid = $_GET['uid'];
 			}
-			$user_login = $_POST['user_login'];
-			if ( empty( $user_login ) ) {
+			if (isset($_POST['user_login'])) {
+				$user_login = $_POST['user_login'];
+			}
+			if ( empty( $user_login ) && isset($_GET['user_login']) ) {
 				$user_login = $_GET['user_login'];
 			}
-			$user_email = $_POST['user_email'];
-			if ( empty( $user_email ) ) {
+			if (isset($_POST['user_email'])) {
+				$user_email = $_POST['user_email'];
+			}
+			if ( empty( $user_email ) && isset($_GET['user_email']) ) {
 				$user_email = $_GET['user_email'];
 			}
-			$post_type = $_POST['post_type'];
-			if ( empty( $post_type ) ) {
+			if (isset($_POST['post_type'])) {
+				$post_type = $_POST['post_type'];
+			}
+			if ( empty( $post_type ) && isset($_GET['post_type']) ) {
 				$post_type = $_GET['post_type'];
 			}
 			if ( !empty( $blog_name ) ) {
@@ -1622,6 +1742,7 @@ function moderation_post_archive() {
                 }
                 
                 $count = 0;
+				$where = '';
                 if ( !empty( $uid ) || !empty( $bid ) || !empty( $pid ) || ( !empty( $post_type ) && $post_type != 'all' ) ) {
                     $where =  "WHERE ";
                 }
@@ -1701,7 +1822,7 @@ function moderation_post_archive() {
                     <tbody id='the-list'>
                     ";
                     //=========================================================//
-                        $class = ('alternate' == $class) ? '' : 'alternate';
+                        $class = (isset($class) && 'alternate' == $class) ? '' : 'alternate';
                         $date_format = get_option('date_format');
                         $time_format = get_option('time_format');
                         foreach ($posts as $post){
@@ -1713,7 +1834,25 @@ function moderation_post_archive() {
     
                         unset( $author_user_login );
                         $author_user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->users . " WHERE ID = '" . $post['post_author'] . "'");
-    
+						
+						if (!isset($_GET['start'])) {
+							$_GET['start'] = '';
+						}
+						if (!isset($_GET['num'])) {
+							$_GET['num'] = '';
+						}
+						if (!isset($post_type)) {
+							$post_type = '';
+						}
+						if (!isset($bid)) {
+							$bid = '';
+						}
+						if (!isset($uid)) {
+							$uid = '';
+						}
+						if (!isset($pid)) {
+							$pid = '';
+						}
                         echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&post_type=" . $post_type . "&bid=" . $post['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . $author_user_login . " (<a href='admin.php?page=moderation-post-archive&post_type=" . $post_type . "&uid=" . $post['post_author'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . stripslashes( $post['post_title'] ) . "</td>";
@@ -1785,35 +1924,52 @@ function moderation_comment_archive() {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
+	if (!isset($_GET[ 'action' ])) {
+		$_GET[ 'action' ] = '';
+	}
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
-			$cid = $_POST['cid'];
-			if ( empty( $cid ) ) {
+			if (isset($_POST['cid'])) {
+				$cid = $_POST['cid'];
+			}
+			if ( empty( $cid ) && isset($_GET['cid']) ) {
 				$cid = $_GET['cid'];
 			}
-			$bid = $_POST['bid'];
-			if ( empty( $bid ) ) {
+			if (isset($_POST['bid'])) {
+				$bid = $_POST['bid'];
+			}
+			if ( empty( $bid ) && isset($_GET['bid']) ) {
 				$bid = $_GET['bid'];
 			}
-			$blog_name = $_POST['blog_name'];
-			if ( empty( $blog_name ) ) {
+			if (isset($_POST['blog_name'])) {
+				$blog_name = $_POST['blog_name'];
+			}
+			if ( empty( $blog_name ) && isset($_GET['blog_name']) ) {
 				$blog_name = $_GET['blog_name'];
 			}
-			$uid = $_POST['uid'];
-			if ( empty( $uid ) ) {
+			if (isset($_POST['uid'])) {
+				$uid = $_POST['uid'];
+			}
+			if ( empty( $uid ) && isset($_GET['uid']) ) {
 				$uid = $_GET['uid'];
 			}
-			$ip = $_POST['ip'];
-			if ( empty( $ip ) ) {
+			if (isset($_POST['ip'])) {
+				$ip = $_POST['ip'];
+			}
+			if ( empty( $ip ) && isset($_GET['ip']) ) {
 				$ip = $_GET['ip'];
 			}
-			$user_login = $_POST['user_login'];
-			if ( empty( $user_login ) ) {
+			if (isset($_POST['user_login'])) {
+				$user_login = $_POST['user_login'];
+			}
+			if ( empty( $user_login ) && isset($_GET['user_login']) ) {
 				$user_login = $_GET['user_login'];
 			}
-			$email = $_POST['email'];
-			if ( empty( $email ) ) {
+			if (isset($_POST['email'])) {
+				$email = $_POST['email'];
+			}
+			if ( empty( $email ) && isset($_GET['email']) ) {
 				$email = $_GET['email'];
 			}
 			if ( !empty( $blog_name ) ) {
@@ -1898,6 +2054,7 @@ function moderation_comment_archive() {
                 }
                 
                 $count = 0;
+				$where = '';
                 if ( !empty( $uid ) || !empty( $bid ) || !empty( $cid ) || !empty( $ip ) || !empty( $email ) ) {
                     $where =  "WHERE ";
                 }
@@ -1985,7 +2142,7 @@ function moderation_comment_archive() {
                     <tbody id='the-list'>
                     ";
                     //=========================================================//
-                        $class = ('alternate' == $class) ? '' : 'alternate';
+                        $class = (isset($class) && 'alternate' == $class) ? '' : 'alternate';
                         $date_format = get_option('date_format');
                         $time_format = get_option('time_format');
                         foreach ($comments as $comment){
@@ -2008,7 +2165,31 @@ function moderation_comment_archive() {
 						} else {
 							$author = $author_email;
 						}
-    
+						
+						if (!isset($_GET['start'])) {
+							$_GET['start'] = '';
+						}
+						if (!isset($_GET['num'])) {
+							$_GET['num'] = '';
+						}
+						if (!isset($email)) {
+							$email = '';
+						}
+						if (!isset($post_type)) {
+							$post_type = '';
+						}
+						if (!isset($bid)) {
+							$bid = '';
+						}
+						if (!isset($uid)) {
+							$uid = '';
+						}
+						if (!isset($cid)) {
+							$cid = '';
+						}
+						if (!isset($ip)) {
+							$ip = '';
+						}
                         echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-comment-archive&bid=" . $comment['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . $author . " (<a href='admin.php?page=moderation-comment-archive&email=" . $author_email . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $comment['comment_stamp'] ) . "</td>";
@@ -2088,26 +2269,37 @@ function moderation_report_archive() {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
+	if (!isset($_GET[ 'action' ])) {
+		$_GET[ 'action' ] = '';
+	}
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
-			$report_type = $_POST['report_type'];
-			if ( empty( $report_type ) ) {
+			if (isset($_POST['report_type'])) {
+				$report_type = $_POST['report_type'];
+			}
+			if ( empty( $report_type ) && isset($_GET['report_type']) ) {
 				$report_type = $_GET['report_type'];
 			}
-			$bid = $_POST['bid'];
-			if ( empty( $bid ) ) {
+			if (isset($_POST['bid'])) {
+				$bid = $_POST['bid'];
+			}
+			if ( empty( $bid ) && isset($_GET['bid']) ) {
 				$bid = $_GET['bid'];
 			}
-			$pid = $_POST['pid'];
-			if ( empty( $pid ) ) {
+			if (isset($_POST['pid'])) {
+				$pid = $_POST['pid'];
+			}
+			if ( empty( $pid ) && isset($_GET['pid']) ) {
 				$pid = $_GET['pid'];
 			}
 			if ( !empty( $pid ) ) {
 				$report_type = 'post';
 			}
-			$cid = $_POST['cid'];
-			if ( empty( $cid ) ) {
+			if (isset($_POST['cid'])) {
+				$cid = $_POST['cid'];
+			}
+			if ( empty( $cid ) && isset($_GET['cid']) ) {
 				$cid = $_GET['cid'];
 			}
 			if ( !empty( $cid ) ) {
@@ -2231,7 +2423,7 @@ function moderation_report_archive() {
                     <tbody id='the-list'>
                     ";
                     //=========================================================//
-                        $class = ('alternate' == $class) ? '' : 'alternate';
+                        $class = (isset($class) && 'alternate' == $class) ? '' : 'alternate';
                         $date_format = get_option('date_format');
                         $time_format = get_option('time_format');
                         foreach ($reports as $report){
