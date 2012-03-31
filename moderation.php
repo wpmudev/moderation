@@ -440,9 +440,9 @@ function moderation_comment_archive_insert($comment_ID){
 }
 
 function moderation_warnings_check() {
-	global $wpdb, $user_ID;
+	global $wpdb, $user_id;
 	if ( !strpos($_SERVER['REQUEST_URI'], 'warning') ){
-		$user_warning_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_ID . "' AND warning_read = '0'");
+		$user_warning_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_id . "' AND warning_read = '0'");
 		if ( $user_warning_count > 0 ) {
 			echo "
 			<SCRIPT LANGUAGE='javascript'>
