@@ -337,15 +337,15 @@ function moderation_init() {
 }
 
 function moderation_process_submission() {
-	global $wpdb, $user_ID;
+	global $wpdb, $user_id;
 	
 	$user_email = '';
 	if (isset($_POST['report_author_email'])) {
 		$user_email = $_POST['report_author_email'];
 	}
 	
-	if ( empty( $user_email ) && !empty( $user_ID ) ) {
-		$user_email = $wpdb->get_var("SELECT user_email FROM " . $wpdb->users . " WHERE ID = '" . $user_ID . "'");
+	if ( empty( $user_email ) && !empty( $user_id ) ) {
+		$user_email = $wpdb->get_var("SELECT user_email FROM " . $wpdb->users . " WHERE ID = '" . $user_id . "'");
 	}
 	
 	$post_type = $wpdb->escape($_POST['object_type']);
@@ -356,7 +356,7 @@ function moderation_process_submission() {
 	$wpdb->query("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_reports
 	(report_blog_ID, report_object_type, report_object_ID, report_reason, report_note, report_user_ID, report_user_email, report_user_IP, report_stamp, report_date, report_date_gmt)
 	VALUES
-	('" . $wpdb->blogid . "', '" . $post_type . "', '" . $post_id . "', '" . $report_reason . "', '" . $report_note . "', '" . $user_ID . "', '" . $user_email . "', '" . $_SERVER['REMOTE_ADDR'] . "', '" . time() . "', '" . current_time('mysql') . "', '" . get_gmt_from_date( current_time('mysql') ) . "')");
+	('" . $wpdb->blogid . "', '" . $post_type . "', '" . $post_id . "', '" . $report_reason . "', '" . $report_note . "', '" . $user_id . "', '" . $user_email . "', '" . $_SERVER['REMOTE_ADDR'] . "', '" . time() . "', '" . current_time('mysql') . "', '" . get_gmt_from_date( current_time('mysql') ) . "')");
 }
 
 function moderation_report_link($object_type, $object_id, $link_text = '', $link_atts = array()) {
@@ -675,7 +675,7 @@ function moderation_report_form($ot, $oi) {
 //------------------------------------------------------------------------//
 
 function moderation_overview() {
-	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site;
 
 	if ( !is_moderator() ) {
 		die();
@@ -999,7 +999,7 @@ function moderation_overview() {
 }
 
 function moderation_posts() {
-	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site, $moderation_save_to_archive;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site, $moderation_save_to_archive;
 
 	if ( !is_moderator() ) {
 		die();
@@ -1206,7 +1206,7 @@ function moderation_posts() {
 }
 
 function moderation_blogs() {
-	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site;
 
 	if ( !is_moderator() ) {
 		die();
@@ -1369,7 +1369,7 @@ function moderation_blogs() {
 }
 
 function moderation_comments() {
-	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site, $moderation_save_to_archive;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site, $moderation_save_to_archive;
 
 	if ( !is_moderator() ) {
 		die();
@@ -1595,7 +1595,7 @@ function moderation_comments() {
 }
 
 function moderation_post_archive() {
-	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site;
 
 	if ( !is_moderator() ) {
 		die();
@@ -1914,7 +1914,7 @@ function moderation_post_archive() {
 }
 
 function moderation_comment_archive() {
-	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site;
 
 	if ( !is_moderator() ) {
 		die();
@@ -2259,7 +2259,7 @@ function moderation_comment_archive() {
 }
 
 function moderation_report_archive() {
-	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site;
 
 	if ( !is_moderator() ) {
 		die();
@@ -2478,12 +2478,15 @@ function moderation_report_archive() {
 }
 
 function moderation_warnings() {
-	global $wpdb, $wp_roles, $current_user, $user_ID, $current_site;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site;
 	
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
 	echo '<div class="wrap">';
+	if (!isset($_GET[ 'action' ])) {
+		$_GET[ 'action' ] = '';
+	}
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
@@ -2491,7 +2494,7 @@ function moderation_warnings() {
             <h2><?php _e('Warnings', 'moderation') ?></h2>
             <ul>
             <?php
-			$query = "SELECT warning_note FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_ID . "' AND warning_read = '0'";
+			$query = "SELECT warning_note FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_id . "' AND warning_read = '0'";
 			$warnings = $wpdb->get_results( $query, ARRAY_A );
 			foreach ( $warnings as $warning ) {
 				echo '<li>' . $warning['warning_note'] . '</li>';
@@ -2507,7 +2510,7 @@ function moderation_warnings() {
 		break;
 		//---------------------------------------------------//
 		case "accept":
-			$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_warnings SET warning_read = '1' WHERE warning_user_ID = '" . $user_ID . "'" );
+			$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_warnings SET warning_read = '1' WHERE warning_user_ID = '" . $user_id . "'" );
 
 			echo "
 			<SCRIPT LANGUAGE='javascript'>
