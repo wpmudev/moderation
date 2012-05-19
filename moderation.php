@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
-Version: 1.0.8
+Version: 1.0.9
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
@@ -235,8 +235,10 @@ function moderation_plug_pages() {
 		add_submenu_page('moderation', __('Post Archive', 'moderation'), __('Post Archive', 'moderation'), 'read', 'moderation-post-archive', 'moderation_post_archive' );
 		add_submenu_page('moderation', __('Comment Archive', 'moderation'), __('Comment Archive', 'moderation'), 'read', 'moderation-comment-archive', 'moderation_comment_archive' );
 	}
-	
-	if ($wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_id . "' AND warning_read = '0'") > 0) {
+	global $current_user;
+
+	get_currentuserinfo();
+	if ($wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $current_user->ID . "' AND warning_read = '0'") > 0) {
 		add_menu_page(__('Moderation Warning', 'moderation'), __('Moderation Warning', 'moderation'), 'read', 'moderation-warning', 'moderation_warnings');
 	}
 }
@@ -440,9 +442,11 @@ function moderation_comment_archive_insert($comment_ID){
 }
 
 function moderation_warnings_check() {
-	global $wpdb, $user_id;
+	global $wpdb, $current_user;
+
+	get_currentuserinfo();
 	if ( !strpos($_SERVER['REQUEST_URI'], 'warning') ){
-		$user_warning_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_id . "' AND warning_read = '0'");
+		$user_warning_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $current_user->ID . "' AND warning_read = '0'");
 		if ( $user_warning_count > 0 ) {
 			echo "
 			<SCRIPT LANGUAGE='javascript'>
@@ -2478,7 +2482,7 @@ function moderation_report_archive() {
 }
 
 function moderation_warnings() {
-	global $wpdb, $wp_roles, $current_user, $user_id, $current_site;
+	global $wpdb, $wp_roles, $current_user, $user_id, $current_site, $current_user;
 	
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
@@ -2487,6 +2491,7 @@ function moderation_warnings() {
 	if (!isset($_GET[ 'action' ])) {
 		$_GET[ 'action' ] = '';
 	}
+	get_currentuserinfo();
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
@@ -2494,7 +2499,7 @@ function moderation_warnings() {
             <h2><?php _e('Warnings', 'moderation') ?></h2>
             <ul>
             <?php
-			$query = "SELECT warning_note FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $user_id . "' AND warning_read = '0'";
+			$query = "SELECT warning_note FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $current_user->ID . "' AND warning_read = '0'";
 			$warnings = $wpdb->get_results( $query, ARRAY_A );
 			foreach ( $warnings as $warning ) {
 				echo '<li>' . $warning['warning_note'] . '</li>';
@@ -2510,7 +2515,7 @@ function moderation_warnings() {
 		break;
 		//---------------------------------------------------//
 		case "accept":
-			$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_warnings SET warning_read = '1' WHERE warning_user_ID = '" . $user_id . "'" );
+			$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_warnings SET warning_read = '1' WHERE warning_user_ID = '" . $current_user->ID . "'" );
 
 			echo "
 			<SCRIPT LANGUAGE='javascript'>
