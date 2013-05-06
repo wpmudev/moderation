@@ -1,9 +1,14 @@
 Plugin Name: Moderation
-Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
+Author: S H Mohanjith (Incsub), Andrew Billits (Incsub), Mariusz Misiek (Incsub)
 
 Change Log:
 ----------------------------------------------------------------------
 ----------------------------------------------------------------------
+
+1.0.8.2 - 05/06/2013 
+----------------------------------------------------------------------
+- Security improvements
+- Fixed: "GROUP BY" sql error
 
 1.0.8.1 - 05/19/2012 
 ----------------------------------------------------------------------

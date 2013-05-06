@@ -3,15 +3,15 @@
 Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
-Author: S H Mohanjith (Incsub), Andrew Billits (Incsub)
-Version: 1.0.8.1
+Author: S H Mohanjith (Incsub), Andrew Billits (Incsub), Mariusz Misiek (Incsub)
+Version: 1.0.8.2
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
 */
 
 /* 
-Copyright 2007-2009 Incsub (http://incsub.com)
+Copyright 2007-2013 Incsub (http://incsub.com)
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License (Version 2 - GPLv2) as published by
@@ -27,7 +27,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-$moderation_current_version = '1.0.8.1';
+$moderation_current_version = '1.0.8.2';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
 //------------------------------------------------------------------------//
@@ -340,6 +340,8 @@ function moderation_init() {
 
 function moderation_process_submission() {
 	global $wpdb, $user_id;
+
+	$user_id = get_current_user_id();
 	
 	$user_email = '';
 	if (isset($_POST['report_author_email'])) {
@@ -347,18 +349,18 @@ function moderation_process_submission() {
 	}
 	
 	if ( empty( $user_email ) && !empty( $user_id ) ) {
-		$user_email = $wpdb->get_var("SELECT user_email FROM " . $wpdb->users . " WHERE ID = '" . $user_id . "'");
+		$user_email = $wpdb->get_var($wpdb->prepare("SELECT user_email FROM " . $wpdb->users . " WHERE ID = %d", $user_id));
 	}
 	
-	$post_type = $wpdb->escape($_POST['object_type']);
-	$post_id = $wpdb->escape($_POST['object_id']);
-	$report_reason = $wpdb->escape($_POST['report_reason']);
-	$report_note = $wpdb->escape($_POST['report_note']);
+	$post_type = $_POST['object_type'];
+	$post_id = $_POST['object_id'];
+	$report_reason = $_POST['report_reason'];
+	$report_note = $_POST['report_note'];
 	
-	$wpdb->query("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_reports
+	$wpdb->query($wpdb->prepare("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_reports
 	(report_blog_ID, report_object_type, report_object_ID, report_reason, report_note, report_user_ID, report_user_email, report_user_IP, report_stamp, report_date, report_date_gmt)
 	VALUES
-	('" . $wpdb->blogid . "', '" . $post_type . "', '" . $post_id . "', '" . $report_reason . "', '" . $report_note . "', '" . $user_id . "', '" . $user_email . "', '" . $_SERVER['REMOTE_ADDR'] . "', '" . time() . "', '" . current_time('mysql') . "', '" . get_gmt_from_date( current_time('mysql') ) . "')");
+	('" . $wpdb->blogid . "', %s, %d, %s, %s, %d, %s, %s, '" . time() . "', '" . current_time('mysql') . "', '" . get_gmt_from_date( current_time('mysql') ) . "')", $post_type, $post_id, $report_reason, $report_note, $user_id, $user_email, $_SERVER['REMOTE_ADDR']));
 }
 
 function moderation_report_link($object_type, $object_id, $link_text = '', $link_atts = array()) {
@@ -422,10 +424,10 @@ function moderation_post_archive_insert($post_ID) {
 	
 	$post = get_post($post_ID);
 	if ( !empty( $post->post_content ) && !empty($post->post_title) ) {
-		$wpdb->query("INSERT IGNORE INTO " . $wpdb->base_prefix . "post_archive
+		$wpdb->query($wpdb->prepare("INSERT IGNORE INTO " . $wpdb->base_prefix . "post_archive
 		(blog_id, post_id, post_author, post_title, post_content, post_type, post_stamp, post_date, post_date_gmt)
 		VALUES
-		('" . $wpdb->blogid . "', '" . $post_ID . "', '" . $post->post_author . "', '" . addslashes( $post->post_title ) . "', '" . addslashes( $post->post_content ) . "', '" . $post->post_type . "', '" . time() . "', '" . $post->post_date . "', '" . $post->post_date_gmt . "')");
+		('" . $wpdb->blogid . "', %d, %d, %s, %s, %s, '" . time() . "', '" . $post->post_date . "', '" . $post->post_date_gmt . "')"), $post_ID, $post->post_author, $post->post_title, $post->post_content, $post->post_type);
 	}
 }
 
@@ -459,7 +461,7 @@ function moderation_warnings_check() {
 
 function moderation_post_delete($post_ID) {
 	global $wpdb;
-	$wpdb->query( "DELETE FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_status = 'new' AND report_blog_ID = '" . $wpdb->blogid . "' AND report_object_type = 'post' AND report_object_ID = '" . $post_ID . "'" );
+	$wpdb->query($wpdb->prepare("DELETE FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_status = 'new' AND report_blog_ID = '" . $wpdb->blogid . "' AND report_object_type = 'post' AND report_object_ID = %s", $post_ID));
 }
 
 function moderation_blog_delete($blog_ID) {
@@ -469,7 +471,7 @@ function moderation_blog_delete($blog_ID) {
 
 function moderation_comment_delete($comment_ID) {
 	global $wpdb;
-	$wpdb->query( "DELETE FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_status = 'new' AND report_blog_ID = '" . $wpdb->blogid . "' AND report_object_type = 'comment' AND report_object_ID = '" . $comment_ID . "'" );
+	$wpdb->query($wpdb->prepare( "DELETE FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_status = 'new' AND report_blog_ID = '" . $wpdb->blogid . "' AND report_object_type = 'comment' AND report_object_ID = %d", $comment_ID ));
 }
 
 function moderation_site_admin_users_column_header($posts_columns) {
@@ -481,7 +483,7 @@ function moderation_site_admin_users_column_header($posts_columns) {
 function moderation_site_admin_users_column_content($column,$uid) {
 	global $wpdb;
 	if ( $column == 'warnings' ) {
-		$warning_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $uid . "'");
+		$warning_count = $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = %d", $uid));
 		echo $warning_count;
 	}
 }
@@ -804,10 +806,10 @@ function moderation_overview() {
 				$user_email = $_GET['user_email'];
 			}
 			if ( !empty( $user_login ) ) {
-				$uid = $wpdb->get_var("SELECT ID FROM " . $wpdb->users . " WHERE user_login = '" . $user_login . "'");
+				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_login = %s", $user_login));
 			}
 			if ( !empty( $user_email ) ) {
-				$uid = $wpdb->get_var("SELECT ID FROM " . $wpdb->users . " WHERE user_email = '" . $user_email . "'");
+				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_email = %s", $user_email));
 			}
 			$user_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "users WHERE ID = '" . $uid . "'");
 			if ( $user_count > 0 ) {
@@ -869,10 +871,10 @@ function moderation_overview() {
 				$user_email = $_GET['user_email'];
 			}
 			if ( !empty( $user_login ) ) {
-				$uid = $wpdb->get_var("SELECT ID FROM " . $wpdb->users . " WHERE user_login = '" . $user_login . "'");
+				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_login = %s", $user_login));
 			}
 			if ( !empty( $user_email ) ) {
-				$uid = $wpdb->get_var("SELECT ID FROM " . $wpdb->users . " WHERE user_email = '" . $user_email . "'");
+				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_email = %s", $user_email));
 			}
 			$user_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "users WHERE ID = '" . $uid . "'");
 			if ( $user_count > 0 ) {
@@ -941,7 +943,7 @@ function moderation_overview() {
 				if (VHOST == 'yes') {
 					$bid = $wpdb->get_var("SELECT blog_id FROM " . $wpdb->blogs . " WHERE domain = '" . $blog_name . "." . $current_site->domains . "'");
 				} else {
-					$bid = $wpdb->get_var("SELECT blog_id FROM " . $wpdb->blogs . " WHERE path = '" . $current_site->path . $blog_name . "/'");
+					$bid = $wpdb->get_var($wpdb->prepare("SELECT blog_id FROM " . $wpdb->blogs . " WHERE path = %s", $current_site->path.$blog_name."/"));
 				}
 			}
 			$blog_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "blogs WHERE blog_id = '" . $bid . "'");
@@ -1042,7 +1044,7 @@ function moderation_posts() {
 				$next = true;
 			}
 			if ( count( $reports ) > 0 ) {
-				$report_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'post' AND report_status = 'new' GROUP BY GROUP BY report_blog_id, report_object_type, report_object_id ORDER BY report_stamp DESC");
+				$report_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'post' AND report_status = 'new' GROUP BY report_blog_id, report_object_type, report_object_id ORDER BY report_stamp DESC");
 				if ($report_count > 30){
 					?>
                     <br />
@@ -1176,7 +1178,7 @@ function moderation_posts() {
 					
 					list($report_ID, $blog_ID, $post_ID) = explode("-", $report_information);
 					if ( $action == 'reject_report' ) {
-						$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'rejected' WHERE report_object_type = 'post' AND report_status = 'new' AND report_blog_ID = '" . $blog_ID . "' AND report_object_ID = '" . $post_ID . "'");
+						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'rejected' WHERE report_object_type = 'post' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $post_ID));
 					}
 					if ( $action == 'remove_post' ) {
 						switch_to_blog( $blog_ID );
@@ -1184,14 +1186,14 @@ function moderation_posts() {
 						if ( $moderation_save_to_archive == 'removed' ) {
 							moderation_post_archive_insert($post_ID);
 						}
-						$wpdb->query( "DELETE FROM " . $wpdb->posts . " WHERE ID = '" . $post_ID . "'" );
+						$wpdb->query($wpdb->prepare( "DELETE FROM " . $wpdb->posts . " WHERE ID = %d", $post_ID ));
 						restore_current_blog();
 		
-						$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'removed' WHERE report_object_type = 'post' AND report_status = 'new' AND report_blog_ID = '" . $blog_ID . "' AND report_object_ID = '" . $post_ID . "'");
-						$wpdb->query("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_warnings
+						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'removed' WHERE report_object_type = 'post' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $post_ID ));
+						$wpdb->query($wpdb->prepare("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_warnings
 						(warning_user_ID, warning_note)
 						VALUES
-						('" . $post_details->post_author . "', '" . addslashes( $remove_note ) . "')");
+						('" . $post_details->post_author . "', %s)", $remove_note));
 					}
 				}
 			}
@@ -1301,7 +1303,7 @@ function moderation_blogs() {
 
 
 					unset( $reasons );
-					$query = "SELECT report_reason, report_note FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'blog' AND report_status = 'new' AND report_blog_ID = '" . $report['report_blog_ID'] . "' AND report_object_ID = '" . $report['report_object_ID'] . "' ORDER BY report_stamp DESC";
+					$query = $wpdb->prepare("SELECT report_reason, report_note FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'blog' AND report_status = 'new' AND report_blog_ID = %s AND report_object_ID = %s ORDER BY report_stamp DESC", $report['report_blog_ID'], $report['report_object_ID']);
 					$reasons = $wpdb->get_results( $query, ARRAY_A );
 
 					echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . stripslashes($blog_details->blogname) . "</a> (" . $blog_details->siteurl . ")</td>";
@@ -1349,10 +1351,10 @@ function moderation_blogs() {
 
 					list($report_ID, $blog_ID) = explode("-", $report_information);
 					if ( $action == 'reject_report' ) {
-						$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'rejected' WHERE report_object_type = 'blog' AND report_status = 'new' AND report_blog_ID = '" . $blog_ID . "' AND report_object_ID = '" . $blog_ID . "'");
+						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'rejected' WHERE report_object_type = 'blog' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $blog_ID ));
 					}
 					if ( $action == 'suspend_blog' ) {
-						$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'suspended' WHERE report_object_type = 'blog' AND report_status = 'new' AND report_blog_ID = '" . $blog_ID . "' AND report_object_ID = '" . $blog_ID . "'");
+						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'suspended' WHERE report_object_type = 'blog' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $blog_ID ));
 				
 						update_archived( $blog_ID, '1' );
 					}
@@ -1412,7 +1414,7 @@ function moderation_comments() {
 				$next = true;
 			}
 			if ( count( $reports ) > 0 ) {
-				$report_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'comment' AND report_status = 'new' GROUP BY GROUP BY report_blog_id, report_object_type, report_object_id ORDER BY report_stamp DESC");
+				$report_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'comment' AND report_status = 'new' GROUP BY report_blog_id, report_object_type, report_object_id ORDER BY report_stamp DESC");
 				if ($report_count > 30){
 					?>
                     <br />
@@ -1481,7 +1483,7 @@ function moderation_comments() {
 					}
 
 					unset( $reasons );
-					$query = "SELECT report_reason, report_note FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'comment' AND report_status = 'new' AND report_blog_ID = '" . $report['report_blog_ID'] . "' AND report_object_ID = '" . $report['report_object_ID'] . "' ORDER BY report_stamp DESC";
+					$query = $wpdb->prepare("SELECT report_reason, report_note FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'comment' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d ORDER BY report_stamp DESC", $report['report_blog_ID'], $report['report_object_ID']);
 					$reasons = $wpdb->get_results( $query, ARRAY_A );
 					echo "<td valign='top'>" . stripslashes( $comment_details->comment_content ) . "</td>";
 					echo "<td valign='top'>";
@@ -1556,7 +1558,7 @@ function moderation_comments() {
 					
 					list($report_ID, $blog_ID, $comment_ID) = explode("-", $report_information);
 					if ( $action == 'reject_report' ) {
-						$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'rejected' WHERE report_object_type = 'comment' AND report_status = 'new' AND report_blog_ID = '" . $blog_ID . "' AND report_object_ID = '" . $comment_ID . "'");
+						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'rejected' WHERE report_object_type = 'comment' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $comment_ID ));
 					}
 					if ( $action == 'remove_comment' ) {
 						switch_to_blog( $blog_ID );
@@ -1567,7 +1569,7 @@ function moderation_comments() {
 						$wpdb->query( "DELETE FROM " . $wpdb->comments . " WHERE comment_ID = '" . $comment_ID . "'" );
 						restore_current_blog();
 		
-						$wpdb->query( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'removed' WHERE report_object_type = 'comment' AND report_status = 'new' AND report_blog_ID = '" . $blog_ID . "' AND report_object_ID = '" . $comment_ID . "'");
+						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'removed' WHERE report_object_type = 'comment' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $comment_ID ));
 						if ( $comment_details->user_id != '0' ) {
 							$warning_user_ID = $comment_details->user_id;
 						} else {
@@ -1576,10 +1578,10 @@ function moderation_comments() {
 							$warning_user_ID = $blog_admin_user_ID;
 						}
 						if ( !empty( $warning_user_ID ) ) {
-							$wpdb->query("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_warnings
+							$wpdb->query($wpdb->prepare("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_warnings
 							(warning_user_ID, warning_note)
 							VALUES
-							('" . $warning_user_ID . "', '" . addslashes( $remove_note ) . "')");
+							(%d, %s)", $warning_user_ID, $remove_note ));
 						}
 					}
 				}
@@ -1602,7 +1604,7 @@ function moderation_post_archive() {
 	global $wpdb, $wp_roles, $current_user, $user_id, $current_site;
 
 	if ( !is_moderator() ) {
-		die();
+		die('');
 	}
 	
 	if (isset($_GET['updated'])) {
@@ -1659,16 +1661,16 @@ function moderation_post_archive() {
 			}
 			if ( !empty( $blog_name ) ) {
 				if (VHOST == 'yes') {
-					$bid = $wpdb->get_var("SELECT blog_id FROM " . $wpdb->blogs . " WHERE domain = '" . $blog_name . "." . $current_site->domains . "'");
+					$bid = $wpdb->get_var($wpdb->prepare("SELECT blog_id FROM " . $wpdb->blogs . " WHERE domain = %s", $blog_name.".".$current_site->domains ));
 				} else {
-					$bid = $wpdb->get_var("SELECT blog_id FROM " . $wpdb->blogs . " WHERE path = '" . $current_site->path . $blog_name . "/'");
+					$bid = $wpdb->get_var($wpdb->prepare("SELECT blog_id FROM " . $wpdb->blogs . " WHERE path = %s", $current_site->path.$blog_name . "/" ));
 				}
 			}
 			if ( !empty( $user_login ) ) {
-				$uid = $wpdb->get_var("SELECT ID FROM " . $wpdb->users . " WHERE user_login = '" . $user_login . "'");
+				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_login = %s", $user_login));
 			}
 			if ( !empty( $user_email ) ) {
-				$uid = $wpdb->get_var("SELECT ID FROM " . $wpdb->users . " WHERE user_email = '" . $user_email . "'");
+				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_email = %s", $user_email));
 			}
 			
 			
@@ -1751,33 +1753,32 @@ function moderation_post_archive() {
                     $where =  "WHERE ";
                 }
                 if ( $post_type != 'all' ) {
-                    $where = $where . "post_type = '" . $post_type . "' ";
+                    $where = $where . "post_type = '".$post_type."'";
                     $count = $count + 1;
                 }
                 if ( !empty( $uid ) ) {
                     if ( $count > 0 ) {
                     $where = $where . "AND ";
                     }
-                    $where = $where . "post_author = '" . $uid . "' ";
+                    $where = $where . "post_author = '".$uid."'";
                     $count = $count + 1;
                 }
                 if ( !empty( $bid ) ) {
                     if ( $count > 0 ) {
                     $where = $where . "AND ";
                     }
-                    $where = $where . "blog_id = '" . $bid . "' ";
+                    $where = $where . $wpdb->prepare("blog_id = %d", $bid);
                     $count = $count + 1;
                 }
                 if ( !empty( $pid ) ) {
                     if ( $count > 0 ) {
                     $where = $where . "AND ";
                     }
-                    $where = $where . "post_id = '" . $pid . "' ";
+                    $where = $where . $wpdb->prepare("post_id = %d", $pid);
                     $count = $count + 1;
                 }
                 
-                $query = "SELECT * FROM " . $wpdb->base_prefix . "post_archive " . $where . " ORDER BY post_stamp DESC";
-                $query .= " LIMIT " . intval( $start ) . ", " . intval( $num );
+                $query = $wpdb->prepare("SELECT * FROM " . $wpdb->base_prefix . "post_archive " . $where . " ORDER BY post_stamp DESC LIMIT %d, %d", $start, $num );
                 $posts = $wpdb->get_results( $query, ARRAY_A );
                 if( count( $posts ) < $num ) {
                     $next = false;
@@ -1837,7 +1838,7 @@ function moderation_post_archive() {
                         $blog_details = get_blog_details( $post['blog_id'] );
     
                         unset( $author_user_login );
-                        $author_user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->users . " WHERE ID = '" . $post['post_author'] . "'");
+                        $author_user_login = $wpdb->get_var($wpdb->prepare("SELECT user_login FROM " . $wpdb->users . " WHERE ID = %d", $post['post_author']));
 						
 						if (!isset($_GET['start'])) {
 							$_GET['start'] = '';
@@ -1881,7 +1882,7 @@ function moderation_post_archive() {
 		break;
 		//---------------------------------------------------//
 		case "view":
-			$post_details = $wpdb->get_row("SELECT * FROM " . $wpdb->base_prefix . "post_archive WHERE post_archive_id = '" . $_GET['post_archive_id'] . "'");
+			$post_details = $wpdb->get_row($wpdb->prepare("SELECT * FROM " . $wpdb->base_prefix . "post_archive WHERE post_archive_id = %d", $_GET['post_archive_id']));
 			$blog_details = get_blog_details( $post_details->blog_id );
 			$author_user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->users . " WHERE ID = '" . $post_details->post_author . "'");
 			?>
@@ -1978,13 +1979,13 @@ function moderation_comment_archive() {
 			}
 			if ( !empty( $blog_name ) ) {
 				if (VHOST == 'yes') {
-					$bid = $wpdb->get_var("SELECT blog_id FROM " . $wpdb->blogs . " WHERE domain = '" . $blog_name . "." . $current_site->domains . "'");
+					$bid = $wpdb->get_var($wpdb->prepare("SELECT blog_id FROM " . $wpdb->blogs . " WHERE domain = %s", $blog_name . "." . $current_site->domains));
 				} else {
-					$bid = $wpdb->get_var("SELECT blog_id FROM " . $wpdb->blogs . " WHERE path = '" . $current_site->path . $blog_name . "/'");
+					$bid = $wpdb->get_var($wpdb->prepare("SELECT blog_id FROM " . $wpdb->blogs . " WHERE path = %s", $current_site->path . $blog_name . "/"));
 				}
 			}
 			if ( !empty( $user_login ) ) {
-				$uid = $wpdb->get_var("SELECT ID FROM " . $wpdb->users . " WHERE user_login = '" . $user_login . "'");
+				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_login = %s", $user_login));
 			}
 			
 			?>
@@ -2066,40 +2067,39 @@ function moderation_comment_archive() {
                     if ( $count > 0 ) {
                     $where = $where . "AND ";
                     }
-                    $where = $where . "comment_author_user_id = '" . $uid . "' ";
+                    $where = $where . $wpdb->prepare("comment_author_user_id = %d", $uid);
                     $count = $count + 1;
                 }
                 if ( !empty( $bid ) ) {
                     if ( $count > 0 ) {
                     $where = $where . "AND ";
                     }
-                    $where = $where . "blog_id = '" . $bid . "' ";
+                    $where = $where . $wpdb->prepare("blog_id = %d", $bid);
                     $count = $count + 1;
                 }
                 if ( !empty( $cid ) ) {
                     if ( $count > 0 ) {
                     $where = $where . "AND ";
                     }
-                    $where = $where . "comment_id = '" . $cid . "' ";
+                    $where = $where . $wpdb->prepare("comment_id = %d", $cid);
                     $count = $count + 1;
                 }
                 if ( !empty( $email ) ) {
                     if ( $count > 0 ) {
                     $where = $where . "AND ";
                     }
-                    $where = $where . "comment_author_email = '" . $email . "' ";
+                    $where = $where . $wpdb->prepare("comment_author_email = %s", $email);
                     $count = $count + 1;
                 }
                 if ( !empty( $ip ) ) {
                     if ( $count > 0 ) {
                     $where = $where . "AND ";
                     }
-                    $where = $where . "comment_author_ip = '" . $ip . "' ";
+                    $where = $where . $wpdb->prepare("comment_author_ip = %s", $ip);
                     $count = $count + 1;
                 }
                 
-                $query = "SELECT * FROM " . $wpdb->base_prefix . "comment_archive " . $where . " ORDER BY comment_stamp DESC";
-                $query .= " LIMIT " . intval( $start ) . ", " . intval( $num );
+                $query = $wpdb->prepare("SELECT * FROM " . $wpdb->base_prefix . "comment_archive " . $where . " ORDER BY comment_stamp DESC LIMIT %d, %d", $start, $num);
                 $comments = $wpdb->get_results( $query, ARRAY_A );
                 if( count( $comments ) < $num ) {
                     $next = false;
@@ -2216,7 +2216,7 @@ function moderation_comment_archive() {
 		break;
 		//---------------------------------------------------//
 		case "view":
-			$comment_details = $wpdb->get_row("SELECT * FROM " . $wpdb->base_prefix . "comment_archive WHERE comment_archive_id = '" . $_GET['comment_archive_id'] . "'");
+			$comment_details = $wpdb->get_row($wpdb->prepare("SELECT * FROM " . $wpdb->base_prefix . "comment_archive WHERE comment_archive_id = %d", $_GET['comment_archive_id']));
 			$blog_details = get_blog_details( $comment_details->blog_id );
 			if ( $comment_details->comment_author_user_id != '0' ) {
 				$author_user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->users . " WHERE ID = '" . $comment_details->comment_author_user_id . "'");
@@ -2365,20 +2365,19 @@ function moderation_report_archive() {
 
                 $where =  "WHERE report_status != 'new' ";
                 if ( $report_type != 'all' ) {
-                    $where = $where . "AND report_object_type = '" . $report_type . "' ";
+                    $where = $where . $wpdb->prepare("AND report_object_type = %s", $report_type);
                 }
                 if ( !empty($bid ) ) {
-                    $where = $where . "AND report_blog_ID = '" . $bid . "' ";
+                    $where = $where . $wpdb->prepare("AND report_blog_ID = %d", $bid);
                 }
                 if ( !empty($pid ) ) {
-                    $where = $where . "AND report_object_ID = '" . $pid . "' ";
+                    $where = $where . $wpdb->prepare("AND report_object_ID = %d", $pid);
                 }
                 if ( !empty($cid ) ) {
-                    $where = $where . "AND report_object_ID = '" . $cid . "' ";
+                    $where = $where . $wpdb->prepare("AND report_object_ID = %d", $cid);
                 }
                 
-                $query = "SELECT * FROM " . $wpdb->base_prefix . "moderation_reports " . $where . " ORDER BY report_stamp DESC";
-                $query .= " LIMIT " . intval( $start ) . ", " . intval( $num );
+                $query = $wpdb->prepare("SELECT * FROM " . $wpdb->base_prefix . "moderation_reports " . $where . " ORDER BY report_stamp DESC LIMIT %d, %d", $start, $num);
                 $reports = $wpdb->get_results( $query, ARRAY_A );
                 if( count( $reports ) < $num ) {
                     $next = false;
