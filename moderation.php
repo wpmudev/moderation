@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub), Mariusz Misiek (Incsub)
-Version: 1.0.8.2
+Version: 1.0.8.3
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
@@ -27,7 +27,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-$moderation_current_version = '1.0.8.2';
+$moderation_current_version = '1.0.8.3';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
 //------------------------------------------------------------------------//
@@ -427,7 +427,7 @@ function moderation_post_archive_insert($post_ID) {
 		$wpdb->query($wpdb->prepare("INSERT IGNORE INTO " . $wpdb->base_prefix . "post_archive
 		(blog_id, post_id, post_author, post_title, post_content, post_type, post_stamp, post_date, post_date_gmt)
 		VALUES
-		('" . $wpdb->blogid . "', %d, %d, %s, %s, %s, '" . time() . "', '" . $post->post_date . "', '" . $post->post_date_gmt . "')"), $post_ID, $post->post_author, $post->post_title, $post->post_content, $post->post_type);
+		('" . $wpdb->blogid . "', %d, %d, %s, %s, %s, '" . time() . "', '" . $post->post_date . "', '" . $post->post_date_gmt . "')", $post_ID, $post->post_author, $post->post_title, $post->post_content, $post->post_type));
 	}
 }
 
