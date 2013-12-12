@@ -4,13 +4,13 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPresds Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub), Mariusz Misiek (Incsub)
-Version: 1.0.8.3
+Version: 1.0.8.4
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
 */
 
-/* 
+/*
 Copyright 2007-2013 Incsub (http://incsub.com)
 
 This program is free software; you can redistribute it and/or modify
@@ -27,17 +27,21 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-$moderation_current_version = '1.0.8.3';
+global $wpmudev_notices;
+$wpmudev_notices[] = array( 'id'=> 82, 'name'=> 'Moderation', 'screens' => array( 'toplevel_page_moderation-network', 'moderation_page_moderation-blogs-network', 'moderation_page_moderation-posts-network', 'moderation_page_moderation-comments-network', 'moderation_page_moderation-report-archive-network', 'moderation_page_moderation-post-archive-network', 'moderation_page_moderation-comment-archive-network' ) );
+include_once(plugin_dir_path( __FILE__ ).'external/dash-notice/wpmudev-dash-notification.php');
+
+$moderation_current_version = '1.0.8.4';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
 //------------------------------------------------------------------------//
 
-if ( !isset( $moderation_save_to_archive )) 
+if ( !isset( $moderation_save_to_archive ))
     $moderation_save_to_archive = 'all'; //Either 'all' or 'removed'
 
 if ( !isset( $moderation_use_filters ))
     $moderation_use_filters = array(
-        'post'      => true, 
+        'post'      => true,
         'comment'   => true,
         'blog'      => true,
     );
@@ -55,7 +59,7 @@ add_action('wpmu_options', 'moderation_site_admin_options');
 add_action('update_wpmu_options', 'moderation_site_admin_options_process');
 add_action('wp_print_scripts', 'moderation_print_scripts');
 add_action('wp_head','moderation_head');
-if ( $moderation_use_filters['post'] === true ) 
+if ( $moderation_use_filters['post'] === true )
     add_filter('the_content', 'moderation_post_filter', 20, 1);
 if ( $moderation_save_to_archive == 'all' ) {
 	add_action('save_post', 'moderation_post_archive_insert');
@@ -93,7 +97,7 @@ function moderation_make_current() {
 	if (get_option( "moderation_version" ) == '') {
 		add_option( 'moderation_version', '0.0.0' );
 	}
-	
+
 	if (get_option( "moderation_version" ) == $moderation_current_version) {
 		// do nothing
 	} else {
@@ -112,11 +116,11 @@ function moderation_global_install() {
 	if (get_site_option( "moderation_installed" ) == '') {
 		add_site_option( 'moderation_installed', 'no' );
 	}
-	
+
 	if (get_site_option( "moderation_installed" ) == "yes") {
 		// do nothing
 	} else {
-	
+
 		$moderation_table1 = "CREATE TABLE IF NOT EXISTS `" . $wpdb->base_prefix . "moderation_reports` (
   `report_ID` bigint(20) unsigned NOT NULL auto_increment,
   `report_blog_ID` int(11) NOT NULL default '0',
@@ -245,7 +249,7 @@ function moderation_plug_pages() {
 
 function moderation_hook_admin_menu() {
 	global $menu, $submenu, $_wp_submenu_nopriv;
-	
+
 	//unset($menu[100]);
 	foreach ($menu as $key=>$val) {
 		if ($val[2] == 'moderation-warning') {
@@ -298,65 +302,65 @@ function moderation_site_admin_options_process() {
 }
 
 function moderation_print_scripts() {
-	wp_enqueue_script('moderation');	
+	wp_enqueue_script('moderation');
 }
 
 function moderation_init() {
 	global $wpdb, $moderation_current_version;
-	
+
 	if ( !is_multisite() )
 		exit( 'The Messaging plugin is only compatible with WordPress Multisite.' );
-	
+
 	wp_register_script('moderation', plugins_url('moderation/js/moderation.js'), array('thickbox'), $moderation_current_version);
-	
+
 	load_plugin_textdomain('moderation', false, dirname(plugin_basename(__FILE__)).'/languages');
-	
+
 	if (isset($_REQUEST['moderation_action'])) {
-		
+
 		switch ($_REQUEST['moderation_action']) {
-			
+
 			case "report_form" :
 				$ot = $_REQUEST['object_type'];
 				$oi = $_REQUEST['object_id'];
 				moderation_report_form($ot, $oi);
 				exit();
-				
+
 			break;
-			
+
 			case "submit_report" :
-				
+
 				moderation_process_submission();
 				echo '<p>&nbsp;</p><p>&nbsp;</p><p>'.__('Thanks for the report. We\'ll look into it', 'moderation').'</p>'; //// CHMAC TODO Prettify and nocache header this
 				echo '<script type="text/javascript">setTimeout("tb_remove()",5000);</script>';
 				exit();
-				
+
 			break;
-			
+
 		}
-		
+
 	}
-	
+
 }
 
 function moderation_process_submission() {
 	global $wpdb, $user_id;
 
 	$user_id = get_current_user_id();
-	
+
 	$user_email = '';
 	if (isset($_POST['report_author_email'])) {
 		$user_email = $_POST['report_author_email'];
 	}
-	
+
 	if ( empty( $user_email ) && !empty( $user_id ) ) {
 		$user_email = $wpdb->get_var($wpdb->prepare("SELECT user_email FROM " . $wpdb->users . " WHERE ID = %d", $user_id));
 	}
-	
+
 	$post_type = $_POST['object_type'];
 	$post_id = $_POST['object_id'];
 	$report_reason = $_POST['report_reason'];
 	$report_note = $_POST['report_note'];
-	
+
 	$wpdb->query($wpdb->prepare("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_reports
 	(report_blog_ID, report_object_type, report_object_ID, report_reason, report_note, report_user_ID, report_user_email, report_user_IP, report_stamp, report_date, report_date_gmt)
 	VALUES
@@ -366,31 +370,31 @@ function moderation_process_submission() {
 function moderation_report_link($object_type, $object_id, $link_text = '', $link_atts = array()) {
     // Set default attribute values, which also support user defined atts
     // relly on wordpress to do the url parameter filtering (shortcode_atts)
-    $default_atts = array_merge( 
+    $default_atts = array_merge(
         array_fill_keys( array_keys( (array) $link_atts ), '' ),
         array( 'tag'   => 'p', 'class' => 'wp-report-this' ));
     $link_atts = shortcode_atts( $default_atts, (array) $link_atts );
-    
+
     // Evaluate $object_type and determin the value of the link's title
     switch ($object_type) {
         case 'blog':
             $link_text = !empty($link_text)
-                ? __($link_text , 'moderation') 
+                ? __($link_text , 'moderation')
                 : __('Report This Blog' , 'moderation');
             break;
-        
+
         case 'post':
             $link_text = !empty($link_text)
-                ? __($link_text , 'moderation') 
+                ? __($link_text , 'moderation')
                 : __('Report This Post', 'moderation');
             break;
-        
+
         case 'comment':
             $link_text = !empty($link_text)
-                ? __($link_text , 'moderation') 
+                ? __($link_text , 'moderation')
                 : __('Report This Comment', 'moderation');
             break;
-        
+
         default:
             // Bail out if object_type was not recognised
             return '';
@@ -415,13 +419,13 @@ function moderation_report_link($object_type, $object_id, $link_text = '', $link
     foreach ($link_atts as $att_name => $att_value) {
         $tag_atts .= " {$att_name}=\"{$att_value}\"";
     }
-    
+
     return "<{$tag}{$tag_atts}>{$link}</{$tag}>";
 }
 
 function moderation_post_archive_insert($post_ID) {
 	global $wpdb, $current_site;
-	
+
 	$post = get_post($post_ID);
 	if ( !empty( $post->post_content ) && !empty($post->post_title) ) {
 		$wpdb->query($wpdb->prepare("INSERT IGNORE INTO " . $wpdb->base_prefix . "post_archive
@@ -433,7 +437,7 @@ function moderation_post_archive_insert($post_ID) {
 
 function moderation_comment_archive_insert($comment_ID){
 	global $wpdb, $current_site;
-	
+
 	$comment = get_comment($comment_ID);
 	if ( !empty( $comment->comment_content ) ) {
 		$wpdb->query("INSERT IGNORE INTO " . $wpdb->base_prefix . "comment_archive
@@ -500,7 +504,7 @@ function moderation_report_post($link_text = '', $link_atts = array()){
 
 function moderation_report_comment($link_text = '', $link_atts = array()){
 	global $comment, $moderation_use_filters;
-	
+
     $moderation_use_filters['comment'] = false;
     if (!is_array($link_atts)) {
 		$link_atts = array('tag' => (string) $link_atts);
@@ -510,7 +514,7 @@ function moderation_report_comment($link_text = '', $link_atts = array()){
 
 function moderation_report_blog($link_text = '', $link_atts = array()){
 	global $wpdb, $moderation_use_filters;
-	
+
     $moderation_use_filters['blog'] = false;
     if (!is_array($link_atts)) {
 		$link_atts = array('tag' => (string) $link_atts);
@@ -520,7 +524,7 @@ function moderation_report_blog($link_text = '', $link_atts = array()){
 
 function moderation_post_filter($content){
 	global $post, $wpdb, $moderation_use_filters;
-	
+
 	$link = '';
 	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE && !is_search() && $moderation_use_filters['post'] === true) {
 		$link = moderation_report_link('post', $post->ID);
@@ -530,7 +534,7 @@ function moderation_post_filter($content){
 
 function moderation_comment_filter($content){
 	global $comment, $wpdb, $moderation_use_filters;
-	
+
 	$link = '';
 	if ( !is_admin() && $wpdb->blogid != BLOG_ID_CURRENT_SITE && $moderation_use_filters['comment'] === true) {
 		$link = moderation_report_link('comment', $comment->comment_ID);
@@ -562,7 +566,7 @@ function moderation_head() {
 	}
 	</script>
 	<?php
-	
+
 }
 
 function moderation_site_admin_options() {
@@ -572,7 +576,7 @@ function moderation_site_admin_options() {
 	}
 	$moderators_can_remove_users = get_site_option('moderators_can_remove_users', 'no');
 	$moderators_can_remove_blogs = get_site_option('moderators_can_remove_blogs', 'no');
-	
+
 	$moderation_report_post_reasons = get_site_option('moderation_report_post_reasons', array('Spam','Language'));
 	$moderation_report_comment_reasons = get_site_option('moderation_report_comment_reasons', array('Spam','Language'));
 	$moderation_report_blog_reasons = get_site_option('moderation_report_blog_reasons', array('Spam','Language'));
@@ -580,8 +584,8 @@ function moderation_site_admin_options() {
 	?>
 		<h3><?php _e('Moderation', 'moderation'); ?></h3>
 		<table class="form-table">
-			<tr valign="top"> 
-				<th scope="row"><?php _e('Site Moderators', 'moderation') ?></th> 
+			<tr valign="top">
+				<th scope="row"><?php _e('Site Moderators', 'moderation') ?></th>
 				<td>
 					<input name="site_moderators" id="site_moderators" style="width: 95%;" value="<?php echo $site_moderators; ?>" size="45" type="text">
 					<br />
@@ -590,15 +594,15 @@ function moderation_site_admin_options() {
 					<?php _e('Note that all Site Admins can access the moderation tab by default and do not need to be listed here.', 'moderation') ?>
 				</td>
 			</tr>
-			<tr valign="top"> 
-				<th scope="row"><?php _e('Moderators Can Remove Users', 'moderation') ?></th> 
+			<tr valign="top">
+				<th scope="row"><?php _e('Moderators Can Remove Users', 'moderation') ?></th>
 				<td>
 					<input name="moderators_can_remove_users" id="moderators_can_remove_users" value="yes" <?php if ( $moderators_can_remove_users == 'yes' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('Yes', 'moderation'); ?><br />
 					<input name="moderators_can_remove_users" id="moderators_can_remove_users" value="no" <?php if ( $moderators_can_remove_users == 'no' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('No', 'moderation'); ?>
 				</td>
 			</tr>
-			<tr valign="top"> 
-				<th scope="row"><?php _e('Moderators Can Remove Blogs', 'moderation') ?></th> 
+			<tr valign="top">
+				<th scope="row"><?php _e('Moderators Can Remove Blogs', 'moderation') ?></th>
 				<td>
 					<input name="moderators_can_remove_blogs" id="moderators_can_remove_blogs" value="yes" <?php if ( $moderators_can_remove_blogs == 'yes' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('Yes', 'moderation'); ?><br />
 					<input name="moderators_can_remove_blogs" id="moderators_can_remove_blogs" value="no" <?php if ( $moderators_can_remove_blogs == 'no' ) { echo 'checked="checked"'; } ?> type="radio"> <?php _e('No', 'moderation'); ?>
@@ -651,7 +655,7 @@ function moderation_report_form($ot, $oi) {
 	if ( $ot == 'blog' ) {
 		$reasons = get_site_option('moderation_report_blog_reasons', array('Spam','Language'));
 	}
-	
+
 	$output = '';
 
 	$output .= '<div id="moderation-report">';
@@ -668,12 +672,12 @@ function moderation_report_form($ot, $oi) {
 	if ( !is_user_logged_in() ) {
 		$output .= '<p>' . __('Email', 'moderation') . ' (' . __('optional', 'moderation') . '):<br /><input type="text" name="report_author_email">';
 	}
-	$output .= '<p><input type="submit" name="action" value="' . __('Submit Report', 'moderation') . '">';
+	$output .= '<p><input class="button button-primary" type="submit" name="action" value="' . __('Submit Report', 'moderation') . '">';
 	$output .= '</form>';
 	$output .= '</div>';
-	
+
 	echo $output;
-	
+
 }
 
 //------------------------------------------------------------------------//
@@ -686,7 +690,7 @@ function moderation_overview() {
 	if ( !is_moderator() ) {
 		die();
 	}
-	
+
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
@@ -717,24 +721,24 @@ function moderation_overview() {
                 <th scope="row"><?php _e('Username', 'moderation') ?></th>
                 <td><input type="text" name="user_login" id="user_login" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('User ID', 'moderation') ?></th>
                 <td><input type="text" name="uid" id="uid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('User Email', 'moderation') ?></th>
                 <td><input type="text" name="user_email" id="user_email" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 </table>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
+            </p>
             </form>
             <?php
 			if ( $moderators_can_remove_users == 'yes' ) {
@@ -745,24 +749,24 @@ function moderation_overview() {
                 <tr valign="top">
                 <th scope="row"><?php _e('Username', 'moderation') ?></th>
                 <td><input type="text" name="user_login" id="user_login" style="width: 95%" value="" />
-                <br /></td> 
+                <br /></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('User ID', 'moderation') ?></th>
                 <td><input type="text" name="uid" id="uid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('User Email', 'moderation') ?></th>
                 <td><input type="text" name="user_email" id="user_email" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 </table>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
+            </p>
             </form>
             <?php
 			}
@@ -775,18 +779,18 @@ function moderation_overview() {
                 <th scope="row"><?php _e('Blog ID', 'moderation') ?></th>
                 <td><input type="text" name="bid" id="bid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Blogname', 'moderation') ?></th>
                 <td><input type="text" name="blog_name" id="blog_name" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 </table>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
+            </p>
             </form>
             <?php
 			}
@@ -845,7 +849,7 @@ function moderation_overview() {
 				?>
 				</p>
 				<p class="submit">
-				<input type="submit" name="Submit" value="<?php _e('Back', 'moderation') ?>" />
+				<input class="button button-primary" type="submit" name="Submit" value="<?php _e('Back', 'moderation') ?>" />
 				</p>
 				</form>
 				<?php
@@ -895,7 +899,7 @@ function moderation_overview() {
 						</tr>
 						</table>
 					<p class="submit">
-					<input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
+					<input class="button button-primary" type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
 					</p>
 					</form>
 					<?php
@@ -965,7 +969,7 @@ function moderation_overview() {
 						</tr>
 						</table>
 					<p class="submit">
-					<input type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
+					<input class="button button-primary" type="submit" name="Submit" value="<?php _e('Continue', 'moderation') ?>" />
 					</p>
 					</form>
 					<?php
@@ -1010,7 +1014,7 @@ function moderation_posts() {
 	if ( !is_moderator() ) {
 		die();
 	}
-	
+
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
@@ -1034,7 +1038,7 @@ function moderation_posts() {
 			} else {
 				$num = intval( $_GET[ 'num' ] );
 			}
-			
+
 			$query = "SELECT * FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'post' AND report_status = 'new' GROUP BY report_blog_ID, report_object_ID ORDER BY report_stamp DESC";
 			$query .= " LIMIT " . intval( $start ) . ", " . intval( $num );
 			$reports = $wpdb->get_results( $query, ARRAY_A );
@@ -1050,17 +1054,17 @@ function moderation_posts() {
                     <br />
                     <table><td>
 					<fieldset>
-					<?php 
-					
+					<?php
+
 					//$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
-					
-					if( $start == 0 ) { 
+
+					if( $start == 0 ) {
 						echo __('Previous Page', 'moderation');
-					} elseif( $start <= 30 ) { 
+					} elseif( $start <= 30 ) {
 						echo '<a href="admin.php?page=moderation-posts&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} else {
 						echo '<a href="admin.php?page=moderation-posts&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
-					} 
+					}
 					if ( $next ) {
 						echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-posts&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
 					} else {
@@ -1074,7 +1078,7 @@ function moderation_posts() {
 				echo "<form name='process_reports' method='POST' action='admin.php?page=moderation-posts&action=process_reports' >";
 				echo "
 				<br />
-				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
+				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'>
 				<thead><tr>
 				<th scope='col'>" . __('Post', 'moderation') . "</th>
 				<th width='25%' scope='col'>" . __('Information', 'moderation') . "</th>
@@ -1149,7 +1153,7 @@ function moderation_posts() {
 				?>
 				</tbody></table>
 				<p class="submit">
-				<input type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
+				<input class="button button-primary" type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
 				</p>
 				</form>
 				<?php
@@ -1169,13 +1173,13 @@ function moderation_posts() {
 					unset( $blog_ID );
 					unset( $post_ID );
 					unset( $remove_note );
-					
+
 					foreach ( $remove_notes as $remove_note_information => $note ) {
 						if ( $remove_note_information = $report_information ) {
 							$remove_note = $note;
 						}
 					}
-					
+
 					list($report_ID, $blog_ID, $post_ID) = explode("-", $report_information);
 					if ( $action == 'reject_report' ) {
 						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'rejected' WHERE report_object_type = 'post' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $post_ID));
@@ -1188,7 +1192,7 @@ function moderation_posts() {
 						}
 						$wpdb->query($wpdb->prepare( "DELETE FROM " . $wpdb->posts . " WHERE ID = %d", $post_ID ));
 						restore_current_blog();
-		
+
 						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'removed' WHERE report_object_type = 'post' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $post_ID ));
 						$wpdb->query($wpdb->prepare("INSERT IGNORE INTO " . $wpdb->base_prefix . "moderation_warnings
 						(warning_user_ID, warning_note)
@@ -1217,7 +1221,7 @@ function moderation_blogs() {
 	if ( !is_moderator() ) {
 		die();
 	}
-	
+
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
@@ -1241,7 +1245,7 @@ function moderation_blogs() {
 			} else {
 				$num = intval( $_GET[ 'num' ] );
 			}
-			
+
 			$query = "SELECT * FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'blog' AND report_status = 'new' GROUP BY report_blog_ID, report_object_ID ORDER BY report_stamp DESC";
 			$query .= " LIMIT " . intval( $start ) . ", " . intval( $num );
 			$reports = $wpdb->get_results( $query, ARRAY_A );
@@ -1257,17 +1261,17 @@ function moderation_blogs() {
                     <br />
                     <table><td>
 					<fieldset>
-					<?php 
-					
+					<?php
+
 					//$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
-					
-					if( $start == 0 ) { 
+
+					if( $start == 0 ) {
 						echo __('Previous Page', 'moderation');
-					} elseif( $start <= 30 ) { 
+					} elseif( $start <= 30 ) {
 						echo '<a href="admin.php?page=moderation-blogs&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} else {
 						echo '<a href="admin.php?page=moderation-blogs&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
-					} 
+					}
 					if ( $next ) {
 						echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-blogss&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
 					} else {
@@ -1281,7 +1285,7 @@ function moderation_blogs() {
 				echo "<form name='process_reports' method='POST' action='admin.php?page=moderation-blogs&action=process_reports' >";
 				echo "
 				<br />
-				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
+				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'>
 				<thead><tr>
 				<th scope='col'>" . __('Blog', 'moderation') . "</th>
 				<th scope='col'>" . __('Report Date/Time', 'moderation') . "</th>
@@ -1331,7 +1335,7 @@ function moderation_blogs() {
 				?>
 				</tbody></table>
 				<p class="submit">
-				<input type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
+				<input class="button button-primary" type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
 				</p>
 				</form>
 				<?php
@@ -1355,7 +1359,7 @@ function moderation_blogs() {
 					}
 					if ( $action == 'suspend_blog' ) {
 						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'suspended' WHERE report_object_type = 'blog' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $blog_ID ));
-				
+
 						update_archived( $blog_ID, '1' );
 					}
 				}
@@ -1380,7 +1384,7 @@ function moderation_comments() {
 	if ( !is_moderator() ) {
 		die();
 	}
-	
+
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
@@ -1404,7 +1408,7 @@ function moderation_comments() {
 			} else {
 				$num = intval( $_GET[ 'num' ] );
 			}
-			
+
 			$query = "SELECT * FROM " . $wpdb->base_prefix . "moderation_reports WHERE report_object_type = 'comment' AND report_status = 'new' GROUP BY report_blog_ID, report_object_ID ORDER BY report_stamp DESC";
 			$query .= " LIMIT " . intval( $start ) . ", " . intval( $num );
 			$reports = $wpdb->get_results( $query, ARRAY_A );
@@ -1420,17 +1424,17 @@ function moderation_comments() {
                     <br />
                     <table><td>
 					<fieldset>
-					<?php 
-					
+					<?php
+
 					//$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
-					
-					if( $start == 0 ) { 
+
+					if( $start == 0 ) {
 						echo __('Previous Page', 'moderation');
-					} elseif( $start <= 30 ) { 
+					} elseif( $start <= 30 ) {
 						echo '<a href="admin.php?page=moderation-comments&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
 					} else {
 						echo '<a href="admin.php?page=moderation-comments&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
-					} 
+					}
 					if ( $next ) {
 						echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-comments&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
 					} else {
@@ -1444,7 +1448,7 @@ function moderation_comments() {
 				echo "<form name='process_reports' method='POST' action='admin.php?page=moderation-comments&action=process_reports' >";
 				echo "
 				<br />
-				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
+				<table cellpadding='3' cellspacing='3' width='100%' class='widefat'>
 				<thead><tr>
 				<th scope='col'>" . __('Comment', 'moderation') . "</th>
 				<th width='25%' scope='col'>" . __('Information', 'moderation') . "</th>
@@ -1472,7 +1476,7 @@ function moderation_comments() {
 					if ( $comment_details->user_id != '0' ) {
 						$author_user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->users . " WHERE ID = '" . $comment_details->user_id . "'");
 					}
-					
+
 					unset( $author_email );
 					$author_email = $comment_details->comment_author_email;
 
@@ -1526,7 +1530,7 @@ function moderation_comments() {
 				?>
 				</tbody></table>
 				<p class="submit">
-				<input type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
+				<input class="button button-primary" type="submit" name="Submit" value="<?php _e('Process Reports', 'moderation') ?>" />
 				</p>
 				</form>
 				<?php
@@ -1549,13 +1553,13 @@ function moderation_comments() {
 					unset( $blog_admin_admin_email );
 					unset( $blog_admin_user_ID );
 					unset( $warning_user_ID );
-					
+
 					foreach ( $remove_notes as $remove_note_information => $note ) {
 						if ( $remove_note_information = $report_information ) {
 							$remove_note = $note;
 						}
 					}
-					
+
 					list($report_ID, $blog_ID, $comment_ID) = explode("-", $report_information);
 					if ( $action == 'reject_report' ) {
 						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'rejected' WHERE report_object_type = 'comment' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $comment_ID ));
@@ -1568,7 +1572,7 @@ function moderation_comments() {
 						}
 						$wpdb->query( "DELETE FROM " . $wpdb->comments . " WHERE comment_ID = '" . $comment_ID . "'" );
 						restore_current_blog();
-		
+
 						$wpdb->query($wpdb->prepare( "UPDATE " . $wpdb->base_prefix . "moderation_reports SET report_status = 'removed' WHERE report_object_type = 'comment' AND report_status = 'new' AND report_blog_ID = %d AND report_object_ID = %d", $blog_ID, $comment_ID ));
 						if ( $comment_details->user_id != '0' ) {
 							$warning_user_ID = $comment_details->user_id;
@@ -1606,7 +1610,7 @@ function moderation_post_archive() {
 	if ( !is_moderator() ) {
 		die('');
 	}
-	
+
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
@@ -1672,8 +1676,8 @@ function moderation_post_archive() {
 			if ( !empty( $user_email ) ) {
 				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_email = %s", $user_email));
 			}
-			
-			
+
+
 			?>
             <h2><?php _e('Post Archive', 'moderation') ?></h2>
             <?php
@@ -1681,57 +1685,57 @@ function moderation_post_archive() {
 			?>
             <form name="post_archive" method="POST" action="admin.php?page=moderation-post-archive">
                 <table class="form-table">
-                <tr valign="top"> 
-                <th scope="row"><?php _e('Post Type', 'moderation') ?></th> 
+                <tr valign="top">
+                <th scope="row"><?php _e('Post Type', 'moderation') ?></th>
                 <td><select name="post_type">
                     <option value="post"><?php _e('Post', 'moderation'); ?></option>
                     <option value="page" ><?php _e('Page', 'moderation'); ?></option>
                     <option value="revision" ><?php _e('Revision', 'moderation'); ?></option>
                     <option value="all" selected="selected" ><?php _e('All', 'moderation'); ?></option>
                 </select>
-                </td> 
+                </td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Post ID', 'moderation') ?></th>
                 <td><input type="text" name="pid" id="pid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Blog ID', 'moderation') ?></th>
                 <td><input type="text" name="bid" id="bid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Blogname', 'moderation') ?></th>
                 <td><input type="text" name="blog_name" id="blog_name" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Username', 'moderation') ?></th>
                 <td><input type="text" name="user_login" id="user_login" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('User ID', 'moderation') ?></th>
                 <td><input type="text" name="uid" id="uid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('User Email', 'moderation') ?></th>
                 <td><input type="text" name="user_email" id="user_email" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 </table>
             <p><?php _e('Note that only posts published after the moderation plugin was added will be available.', 'moderation'); ?></p>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" />
+            </p>
             </form>
 			<?php
 			}
@@ -1746,7 +1750,7 @@ function moderation_post_archive() {
                 } else {
                     $num = intval( $_GET[ 'num' ] );
                 }
-                
+
                 $count = 0;
 				$where = '';
                 if ( !empty( $uid ) || !empty( $bid ) || !empty( $pid ) || ( !empty( $post_type ) && $post_type != 'all' ) ) {
@@ -1777,7 +1781,7 @@ function moderation_post_archive() {
                     $where = $where . $wpdb->prepare("post_id = %d", $pid);
                     $count = $count + 1;
                 }
-                
+
                 $query = $wpdb->prepare("SELECT * FROM " . $wpdb->base_prefix . "post_archive " . $where . " ORDER BY post_stamp DESC LIMIT %d, %d", $start, $num );
                 $posts = $wpdb->get_results( $query, ARRAY_A );
                 if( count( $posts ) < $num ) {
@@ -1792,17 +1796,17 @@ function moderation_post_archive() {
                         <br />
                         <table><td>
                         <fieldset>
-                        <?php 
-                        
+                        <?php
+
                         //$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
-                        
-                        if( $start == 0 ) { 
+
+                        if( $start == 0 ) {
                             echo __('Previous Page', 'moderation');
-                        } elseif( $start <= 30 ) { 
+                        } elseif( $start <= 30 ) {
                             echo '<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } else {
                             echo '<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
-                        } 
+                        }
                         if ( $next ) {
                             echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
                         } else {
@@ -1815,7 +1819,7 @@ function moderation_post_archive() {
                     }
                     echo "
                     <br />
-                    <table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
+                    <table cellpadding='3' cellspacing='3' width='100%' class='widefat'>
                     <thead><tr>
                     <th scope='col'>" . __('Blog', 'moderation') . "</th>
                     <th scope='col'>" . __('Author', 'moderation') . "</th>
@@ -1833,13 +1837,13 @@ function moderation_post_archive() {
                         foreach ($posts as $post){
                         //=========================================================//
                         echo "<tr class='" . $class . "'>";
-    
+
                         unset( $blog_details );
                         $blog_details = get_blog_details( $post['blog_id'] );
-    
+
                         unset( $author_user_login );
                         $author_user_login = $wpdb->get_var($wpdb->prepare("SELECT user_login FROM " . $wpdb->users . " WHERE ID = %d", $post['post_author']));
-						
+
 						if (!isset($_GET['start'])) {
 							$_GET['start'] = '';
 						}
@@ -1864,7 +1868,7 @@ function moderation_post_archive() {
                         echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $post['post_stamp'] ) . "</td>";
                         echo "<td valign='top'>" . ucfirst( $post['post_type'] ) . "</td>";
                         echo "<td valign='top'><a href='admin.php?page=moderation-post-archive&action=view&post_archive_id=" . $post['post_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&post_type=" . $post_type . "&bid=" . $bid . "&uid=" . $uid . "&pid=" . $pid . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a></td>";
-    
+
                         echo "</tr>";
                         $class = ('alternate' == $class) ? '' : 'alternate';
                         //=========================================================//
@@ -1905,8 +1909,8 @@ function moderation_post_archive() {
 			}
 			?>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Return', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Return', 'moderation') ?>" />
+            </p>
             </form>
     	    <?php
 		break;
@@ -1924,7 +1928,7 @@ function moderation_comment_archive() {
 	if ( !is_moderator() ) {
 		die();
 	}
-	
+
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
@@ -1987,7 +1991,7 @@ function moderation_comment_archive() {
 			if ( !empty( $user_login ) ) {
 				$uid = $wpdb->get_var($wpdb->prepare("SELECT ID FROM " . $wpdb->users . " WHERE user_login = %s", $user_login));
 			}
-			
+
 			?>
             <h2><?php _e('Comment Archive', 'moderation') ?></h2>
             <?php
@@ -2000,49 +2004,49 @@ function moderation_comment_archive() {
                 <th scope="row"><?php _e('Comment ID', 'moderation') ?></th>
                 <td><input type="text" name="cid" id="cid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Blog ID', 'moderation') ?></th>
                 <td><input type="text" name="bid" id="bid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Blogname', 'moderation') ?></th>
                 <td><input type="text" name="blog_name" id="blog_name" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Username', 'moderation') ?></th>
                 <td><input type="text" name="user_login" id="user_login" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('User ID', 'moderation') ?></th>
                 <td><input type="text" name="uid" id="uid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Email', 'moderation') ?></th>
                 <td><input type="text" name="user_email" id="user_email" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('IP', 'moderation') ?></th>
                 <td><input type="text" name="ip" id="ip" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 </table>
             <p><?php _e('Note that only comments published after the moderation plugin was added will be available.', 'moderation'); ?></p>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" />
+            </p>
             </form>
 			<?php
 			}
@@ -2057,7 +2061,7 @@ function moderation_comment_archive() {
                 } else {
                     $num = intval( $_GET[ 'num' ] );
                 }
-                
+
                 $count = 0;
 				$where = '';
                 if ( !empty( $uid ) || !empty( $bid ) || !empty( $cid ) || !empty( $ip ) || !empty( $email ) ) {
@@ -2098,7 +2102,7 @@ function moderation_comment_archive() {
                     $where = $where . $wpdb->prepare("comment_author_ip = %s", $ip);
                     $count = $count + 1;
                 }
-                
+
                 $query = $wpdb->prepare("SELECT * FROM " . $wpdb->base_prefix . "comment_archive " . $where . " ORDER BY comment_stamp DESC LIMIT %d, %d", $start, $num);
                 $comments = $wpdb->get_results( $query, ARRAY_A );
                 if( count( $comments ) < $num ) {
@@ -2113,17 +2117,17 @@ function moderation_comment_archive() {
                         <br />
                         <table><td>
                         <fieldset>
-                        <?php 
-                        
+                        <?php
+
                         //$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
-                        
-                        if( $start == 0 ) { 
+
+                        if( $start == 0 ) {
                             echo __('Previous Page', 'moderation');
-                        } elseif( $start <= 30 ) { 
+                        } elseif( $start <= 30 ) {
                             echo '<a href="admin.php?page=moderation-comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } else {
                             echo '<a href="admin.php?page=moderation-comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
-                        } 
+                        }
                         if ( $next ) {
                             echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-comment-archive&uid=' . $uid . '&bid=' . $bid . '&ip=' . $ip . '&email=' . $email . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
                         } else {
@@ -2136,7 +2140,7 @@ function moderation_comment_archive() {
                     }
                     echo "
                     <br />
-                    <table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
+                    <table cellpadding='3' cellspacing='3' width='100%' class='widefat'>
                     <thead><tr>
                     <th scope='col'>" . __('Blog', 'moderation') . "</th>
                     <th scope='col'>" . __('Author', 'moderation') . "</th>
@@ -2152,24 +2156,24 @@ function moderation_comment_archive() {
                         foreach ($comments as $comment){
                         //=========================================================//
                         echo "<tr class='" . $class . "'>";
-    
+
                         unset( $blog_details );
                         $blog_details = get_blog_details( $comment['blog_id'] );
-    
+
 						unset( $author_user_login );
 						if ( $comment['comment_author_user_id'] != '0' ) {
 							$author_user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->users . " WHERE ID = '" . $comment['comment_author_user_id'] . "'");
 						}
-						
+
 						unset( $author_email );
 						$author_email = $comment['comment_author_email'];
-	
+
 						if ( !empty( $author_user_login ) ) {
 							$author = $author_user_login . " (" . $author_email . ")";
 						} else {
 							$author = $author_email;
 						}
-						
+
 						if (!isset($_GET['start'])) {
 							$_GET['start'] = '';
 						}
@@ -2198,7 +2202,7 @@ function moderation_comment_archive() {
                         echo "<td valign='top'>" . $author . " (<a href='admin.php?page=moderation-comment-archive&email=" . $author_email . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $comment['comment_stamp'] ) . "</td>";
                         echo "<td valign='top'><a href='admin.php?page=moderation-comment-archive&action=view&comment_archive_id=" . $comment['comment_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&bid=" . $bid . "&uid=" . $uid . "&ip=" . $ip . "&email=" . $email . "&cid=" . $cid . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a></td>";
-    
+
                         echo "</tr>";
                         $class = ('alternate' == $class) ? '' : 'alternate';
                         //=========================================================//
@@ -2221,7 +2225,7 @@ function moderation_comment_archive() {
 			if ( $comment_details->comment_author_user_id != '0' ) {
 				$author_user_login = $wpdb->get_var("SELECT user_login FROM " . $wpdb->users . " WHERE ID = '" . $comment_details->comment_author_user_id . "'");
 			}
-			
+
 			$author_email = $comment_details->comment_author_email;
 
 			if ( !empty( $author_user_login ) ) {
@@ -2249,8 +2253,8 @@ function moderation_comment_archive() {
 			}
 			?>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Return', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Return', 'moderation') ?>" />
+            </p>
             </form>
     	    <?php
 		break;
@@ -2268,7 +2272,7 @@ function moderation_report_archive() {
 	if ( !is_moderator() ) {
 		die();
 	}
-	
+
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
@@ -2316,38 +2320,38 @@ function moderation_report_archive() {
 			?>
             <form name="report_archive" method="POST" action="admin.php?page=moderation-report-archive">
                 <table class="form-table">
-                <tr valign="top"> 
-                <th scope="row"><?php _e('Report Type', 'moderation') ?></th> 
+                <tr valign="top">
+                <th scope="row"><?php _e('Report Type', 'moderation') ?></th>
                 <td><select name="report_type">
                     <option value="post"><?php _e('Post', 'moderation'); ?></option>
                     <option value="comment" ><?php _e('Comment', 'moderation'); ?></option>
                     <option value="blog" ><?php _e('Blog', 'moderation'); ?></option>
                     <option value="all" selected="selected" ><?php _e('All', 'moderation'); ?></option>
                 </select>
-                </td> 
+                </td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Blog ID', 'moderation') ?></th>
                 <td><input type="text" name="bid" id="bid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Post ID', 'moderation') ?></th>
                 <td><input type="text" name="pid" id="pid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 <tr valign="top">
                 <th scope="row"><?php _e('Comment ID', 'moderation') ?></th>
                 <td><input type="text" name="cid" id="cid" style="width: 95%" value="" />
                 <br />
-                <?php //_e('') ?></td> 
+                <?php //_e('') ?></td>
                 </tr>
                 </table>
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Search', 'moderation') ?>" />
+            </p>
             </form>
 			<?php
 			}
@@ -2376,7 +2380,7 @@ function moderation_report_archive() {
                 if ( !empty($cid ) ) {
                     $where = $where . $wpdb->prepare("AND report_object_ID = %d", $cid);
                 }
-                
+
                 $query = $wpdb->prepare("SELECT * FROM " . $wpdb->base_prefix . "moderation_reports " . $where . " ORDER BY report_stamp DESC LIMIT %d, %d", $start, $num);
                 $reports = $wpdb->get_results( $query, ARRAY_A );
                 if( count( $reports ) < $num ) {
@@ -2391,17 +2395,17 @@ function moderation_report_archive() {
                         <br />
                         <table><td>
                         <fieldset>
-                        <?php 
-                        
+                        <?php
+
                         //$order_sort = "order=" . $_GET[ 'order' ] . "&sortby=" . $_GET[ 'sortby' ];
-                        
-                        if( $start == 0 ) { 
+
+                        if( $start == 0 ) {
                             echo __('Previous Page', 'moderation');
-                        } elseif( $start <= 30 ) { 
+                        } elseif( $start <= 30 ) {
                             echo '<a href="admin.php?page=moderation-report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } else {
                             echo '<a href="admin.php?page=moderation-report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
-                        } 
+                        }
                         if ( $next ) {
                             echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-report-archive&cid=' . $cid . '&bid=' . $bid . '&pid=' . $pid . '&report_type=' . $report_type . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
                         } else {
@@ -2414,7 +2418,7 @@ function moderation_report_archive() {
                     }
                     echo "
                     <br />
-                    <table cellpadding='3' cellspacing='3' width='100%' class='widefat'> 
+                    <table cellpadding='3' cellspacing='3' width='100%' class='widefat'>
                     <thead><tr>
                     <th scope='col'>" . __('Report Type', 'moderation') . "</th>
 					<th scope='col'>" . __('Report Reason', 'moderation') . "</th>
@@ -2432,7 +2436,7 @@ function moderation_report_archive() {
                         foreach ($reports as $report){
                         //=========================================================//
                         echo "<tr class='" . $class . "'>";
-    
+
                         unset( $blog_details );
                         $blog_details = get_blog_details( $report['report_blog_ID'] );
 
@@ -2446,7 +2450,7 @@ function moderation_report_archive() {
 						echo "<td valign='top'>" . $report_reason . "</td>";
 						echo "<td valign='top'>" . ucfirst( $report['report_status'] ) . "</td>";
 						echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (" . $blog_details->siteurl . ")</td>";
-						
+
                         echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $report['report_stamp'] ) . "</td>";
                         echo "<td valign='top'>";
 						if ( $report['report_object_type'] == 'post' ) {
@@ -2456,7 +2460,7 @@ function moderation_report_archive() {
 							echo "<a href='admin.php?page=moderation-comment-archive&bid=" . $report['report_blog_ID'] . "&cid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a>";
 						}
 						echo"</td>";
-    
+
                         echo "</tr>";
                         $class = ('alternate' == $class) ? '' : 'alternate';
                         //=========================================================//
@@ -2482,7 +2486,7 @@ function moderation_report_archive() {
 
 function moderation_warnings() {
 	global $wpdb, $wp_roles, $current_user, $user_id, $current_site, $current_user;
-	
+
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
 	}
@@ -2507,8 +2511,8 @@ function moderation_warnings() {
             </ul>
             <form name="accept" method="POST" action="admin.php?page=moderation-warning&action=accept">
             <p class="submit">
-            <input type="submit" name="Submit" value="<?php _e('Accept', 'moderation') ?>" /> 
-            </p> 
+            <input class="button button-primary" type="submit" name="Submit" value="<?php _e('Accept', 'moderation') ?>" />
+            </p>
             </form>
             <?php
 		break;
@@ -2533,14 +2537,4 @@ function moderation_warnings() {
 
 function moderation_roundup($value, $dp){
     return ceil($value*pow(10, $dp))/pow(10, $dp);
-}
-
-if ( !function_exists( 'wdp_un_check' ) ) {
-	add_action( 'admin_notices', 'wdp_un_check', 5 );
-	add_action( 'network_admin_notices', 'wdp_un_check', 5 );
-
-	function wdp_un_check() {
-		if ( !class_exists( 'WPMUDEV_Update_Notifications' ) && current_user_can( 'edit_users' ) )
-			echo '<div class="error fade"><p>' . __('Please install the latest version of <a href="http://premium.wpmudev.org/project/update-notifications/" title="Download Now &raquo;">our free Update Notifications plugin</a> which helps you stay up-to-date with the most stable, secure versions of WPMU DEV themes and plugins. <a href="http://premium.wpmudev.org/wpmu-dev/update-notifications-plugin-information/">More information &raquo;</a>', 'moderation') . '</a></p></div>';
-	}
 }
