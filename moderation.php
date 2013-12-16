@@ -27,10 +27,6 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-global $wpmudev_notices;
-$wpmudev_notices[] = array( 'id'=> 82, 'name'=> 'Moderation', 'screens' => array( 'toplevel_page_moderation-network', 'moderation_page_moderation-blogs-network', 'moderation_page_moderation-posts-network', 'moderation_page_moderation-comments-network', 'moderation_page_moderation-report-archive-network', 'moderation_page_moderation-post-archive-network', 'moderation_page_moderation-comment-archive-network' ) );
-include_once(plugin_dir_path( __FILE__ ).'external/dash-notice/wpmudev-dash-notification.php');
-
 $moderation_current_version = '1.0.8.4';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
@@ -2538,3 +2534,7 @@ function moderation_warnings() {
 function moderation_roundup($value, $dp){
     return ceil($value*pow(10, $dp))/pow(10, $dp);
 }
+
+global $wpmudev_notices;
+$wpmudev_notices[] = array( 'id'=> 82, 'name'=> 'Moderation', 'screens' => array( 'toplevel_page_moderation-network', 'moderation_page_moderation-blogs-network', 'moderation_page_moderation-posts-network', 'moderation_page_moderation-comments-network', 'moderation_page_moderation-report-archive-network', 'moderation_page_moderation-post-archive-network', 'moderation_page_moderation-comment-archive-network' ) );
+include_once(plugin_dir_path( __FILE__ ).'external/dash-notice/wpmudev-dash-notification.php');
