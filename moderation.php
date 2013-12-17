@@ -2,7 +2,7 @@
 /*
 Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
-Description: Moderate posts, comments and blogs across your WordPresds Mu install
+Description: Moderate posts, comments and blogs across your WordPress Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub), Mariusz Misiek (Incsub)
 Version: 1.0.8.4
 Author URI: http://incsub.com
