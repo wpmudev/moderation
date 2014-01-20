@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPress Mu install
 Author: S H Mohanjith (Incsub), Andrew Billits (Incsub), Mariusz Misiek (Incsub)
-Version: 1.0.8.4
+Version: 1.0.8.5
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
@@ -27,7 +27,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-$moderation_current_version = '1.0.8.4';
+$moderation_current_version = '1.0.8.5';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
 //------------------------------------------------------------------------//
@@ -828,7 +828,7 @@ function moderation_overview() {
 				<br />
 				<strong><?php _e('Warnings', 'moderation'); ?></strong>: <?php echo $warning_count; ?>
 				<br />
-				<strong><?php _e('Post Archive', 'moderation'); ?></strong>: <a href="admin.php?page=moderation-post-archive&post_type=post&uid=<?php echo $uid;?>" style="text-decoration:none;" ><?php _e('View', 'moderation'); ?></a>
+				<strong><?php _e('Post Archive', 'moderation'); ?></strong>: <a href="admin.php?page=moderation-post-archive&object_type=post&uid=<?php echo $uid;?>" style="text-decoration:none;" ><?php _e('View', 'moderation'); ?></a>
 				<br />
 				<strong><?php _e('Blogs', 'moderation'); ?></strong>:
                 <?php
@@ -1111,10 +1111,10 @@ function moderation_posts() {
 					echo "<a href='" . $post_permalink . "' rel='permalink' class='edit'>" . stripslashes( $post_details->post_title ) . "</a>";
 					echo "<br /><br />";
 					echo "<strong>" . __('Post Author', 'moderation') . "</strong>:<br />";
-					echo $author_user_login . " (<a href='admin.php?page=moderation-post-archive&post_type=post&uid=" . $post_details->post_author . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
+					echo $author_user_login . " (<a href='admin.php?page=moderation-post-archive&object_type=post&uid=" . $post_details->post_author . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
 					echo "<strong>" . __('Blog', 'moderation') . "</strong>:<br />";
-					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&post_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
+					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&object_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
 					echo "<strong>" . __('Report Date/Time', 'moderation') . "</strong>:<br />";
 					echo date_i18n( $date_format . ' ' . $time_format, $report['report_stamp'] );
@@ -1491,7 +1491,7 @@ function moderation_comments() {
 					echo $author . " (<a href='admin.php?page=moderation-comment-archive&email=" . $author_email . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
 					echo "<strong>" . __('Blog', 'moderation') . "</strong>:<br />";
-					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-comment-archive&post_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
+					echo "<a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-comment-archive&object_type=post&bid=" . $report['report_blog_ID'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)";
 					echo "<br /><br />";
 					echo "<strong>" . __('Report Date/Time', 'moderation') . "</strong>:<br />";
 					echo date_i18n( $date_format . ' ' . $time_format, $report['report_stamp'] );
@@ -1653,11 +1653,11 @@ function moderation_post_archive() {
 			if ( empty( $user_email ) && isset($_GET['user_email']) ) {
 				$user_email = $_GET['user_email'];
 			}
-			if (isset($_POST['post_type'])) {
-				$post_type = $_POST['post_type'];
+			if (isset($_POST['object_type'])) {
+				$post_type = $_POST['object_type'];
 			}
-			if ( empty( $post_type ) && isset($_GET['post_type']) ) {
-				$post_type = $_GET['post_type'];
+			if ( empty( $post_type ) && isset($_GET['object_type']) ) {
+				$post_type = $_GET['object_type'];
 			}
 			if ( !empty( $blog_name ) ) {
 				if (VHOST == 'yes') {
@@ -1683,7 +1683,7 @@ function moderation_post_archive() {
                 <table class="form-table">
                 <tr valign="top">
                 <th scope="row"><?php _e('Post Type', 'moderation') ?></th>
-                <td><select name="post_type">
+                <td><select name="object_type">
                     <option value="post"><?php _e('Post', 'moderation'); ?></option>
                     <option value="page" ><?php _e('Page', 'moderation'); ?></option>
                     <option value="revision" ><?php _e('Revision', 'moderation'); ?></option>
@@ -1799,12 +1799,12 @@ function moderation_post_archive() {
                         if( $start == 0 ) {
                             echo __('Previous Page', 'moderation');
                         } elseif( $start <= 30 ) {
-                            echo '<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
+                            echo '<a href="admin.php?page=moderation-post-archive&object_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=0&' . $order_sort . ' " style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         } else {
-                            echo '<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
+                            echo '<a href="admin.php?page=moderation-post-archive&object_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start - $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Previous Page', 'moderation') . '</a>';
                         }
                         if ( $next ) {
-                            echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-post-archive&post_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
+                            echo '&nbsp;||&nbsp;<a href="admin.php?page=moderation-post-archive&object_type=' . $post_type . '&uid=' . $uid . '&bid=' . $bid . '&start=' . ( $start + $num ) . '&' . $order_sort . '" style="text-decoration:none;" >' . __('Next Page', 'moderation') . '</a>';
                         } else {
                             echo '&nbsp;||&nbsp;' . __('Next Page', 'moderation');
                         }
@@ -1858,12 +1858,12 @@ function moderation_post_archive() {
 						if (!isset($pid)) {
 							$pid = '';
 						}
-                        echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&post_type=" . $post_type . "&bid=" . $post['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
-                        echo "<td valign='top'>" . $author_user_login . " (<a href='admin.php?page=moderation-post-archive&post_type=" . $post_type . "&uid=" . $post['post_author'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
+                        echo "<td valign='top'><a href='" . $blog_details->siteurl . "' rel='permalink' class='edit'>" . $blog_details->blogname . "</a> (<a href='admin.php?page=moderation-post-archive&object_type=" . $post_type . "&bid=" . $post['blog_id'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
+                        echo "<td valign='top'>" . $author_user_login . " (<a href='admin.php?page=moderation-post-archive&object_type=" . $post_type . "&uid=" . $post['post_author'] . "' rel='permalink' class='edit'>" . __('Archive', 'moderation') . "</a>)</td>";
                         echo "<td valign='top'>" . stripslashes( $post['post_title'] ) . "</td>";
                         echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $post['post_stamp'] ) . "</td>";
-                        echo "<td valign='top'>" . ucfirst( $post['post_type'] ) . "</td>";
-                        echo "<td valign='top'><a href='admin.php?page=moderation-post-archive&action=view&post_archive_id=" . $post['post_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&post_type=" . $post_type . "&bid=" . $bid . "&uid=" . $uid . "&pid=" . $pid . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a></td>";
+                        echo "<td valign='top'>" . ucfirst( $post['object_type'] ) . "</td>";
+                        echo "<td valign='top'><a href='admin.php?page=moderation-post-archive&action=view&post_archive_id=" . $post['post_archive_id'] . "&start=" . $_GET['start'] . "&num=" . $_GET['num'] . "&object_type=" . $post_type . "&bid=" . $bid . "&uid=" . $uid . "&pid=" . $pid . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a></td>";
 
                         echo "</tr>";
                         $class = ('alternate' == $class) ? '' : 'alternate';
@@ -1888,19 +1888,19 @@ function moderation_post_archive() {
 			?>
         	<h2><?php echo stripslashes($post_details->post_title); ?></h2>
             <ul>
-            	<li><strong><?php _e('Blog', 'moderation'); ?>: </strong><a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a> (<a href="admin.php?page=moderation-post-archive&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $post_details->blog_id; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
-            	<li><strong><?php _e('Author', 'moderation'); ?>: </strong><?php echo $author_user_login; ?>  (<a href="admin.php?page=moderation-post-archive&post_type=<?php echo $_GET['post_type']; ?>&uid=<?php echo $post_details->post_author; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
+            	<li><strong><?php _e('Blog', 'moderation'); ?>: </strong><a href="<?php echo $blog_details->siteurl; ?>" style="text-decoration:none;"><?php echo $blog_details->blogname; ?></a> (<a href="admin.php?page=moderation-post-archive&object_type=<?php echo $_GET['object_type']; ?>&bid=<?php echo $post_details->blog_id; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
+            	<li><strong><?php _e('Author', 'moderation'); ?>: </strong><?php echo $author_user_login; ?>  (<a href="admin.php?page=moderation-post-archive&object_type=<?php echo $_GET['object_type']; ?>&uid=<?php echo $post_details->post_author; ?>" style="text-decoration:none;"><?php _e('Archive', 'moderation'); ?></a>)</li>
             	<li><strong><?php _e('Date/Time', 'moderation'); ?>: </strong><?php echo date_i18n( get_option('date_format') . ' ' . get_option('time_format'), $post_details->post_stamp ); ?></li>
             </ul>
         	<p><?php echo stripslashes($post_details->post_content); ?></p>
             <?php
 			if ( !empty($_GET['start']) || !empty($_GET['num']) ) {
 				?>
-				<form name="post_archive" method="POST" action="admin.php?page=moderation-post-archive&start=<?php echo $_GET['start']; ?>&num=<?php echo $_GET['num']; ?>&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&pid=<?php echo $_GET['pid']; ?>">
+				<form name="post_archive" method="POST" action="admin.php?page=moderation-post-archive&start=<?php echo $_GET['start']; ?>&num=<?php echo $_GET['num']; ?>&object_type=<?php echo $_GET['object_type']; ?>&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&pid=<?php echo $_GET['pid']; ?>">
                 <?php
 			} else {
 				?>
-            	<form name="post_archive" method="POST" action="admin.php?page=moderation-post-archive&post_type=<?php echo $_GET['post_type']; ?>&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&pid=<?php echo $_GET['pid']; ?>">
+            	<form name="post_archive" method="POST" action="admin.php?page=moderation-post-archive&object_type=<?php echo $_GET['object_type']; ?>&bid=<?php echo $_GET['bid']; ?>&uid=<?php echo $_GET['uid']; ?>&pid=<?php echo $_GET['pid']; ?>">
                 <?php
 			}
 			?>
@@ -2450,7 +2450,7 @@ function moderation_report_archive() {
                         echo "<td valign='top'>" . date_i18n( $date_format . ' ' . $time_format, $report['report_stamp'] ) . "</td>";
                         echo "<td valign='top'>";
 						if ( $report['report_object_type'] == 'post' ) {
-							echo "<a href='admin.php?page=moderation-post-archive&post_type=all&bid=" . $report['report_blog_ID'] . "&pid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a>";
+							echo "<a href='admin.php?page=moderation-post-archive&object_type=all&bid=" . $report['report_blog_ID'] . "&pid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a>";
 						}
 						if ( $report['report_object_type'] == 'comment' ) {
 							echo "<a href='admin.php?page=moderation-comment-archive&bid=" . $report['report_blog_ID'] . "&cid=" . $report['report_object_ID'] . "' rel='permalink' class='edit'>" . __('View', 'moderation') . "</a>";
