@@ -3,7 +3,7 @@
 Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPress Mu install
-Author: S H Mohanjith (Incsub), Andrew Billits (Incsub), Mariusz Misiek (Incsub)
+Author: WPMU DEV
 Version: 1.0.8.5
 Author URI: http://incsub.com
 Network: true
@@ -12,6 +12,8 @@ WDP ID: 82
 
 /*
 Copyright 2007-2013 Incsub (http://incsub.com)
+Author - S H Mohanjith (Incsub)
+Contributors - Andrew Billits (Incsub), Mariusz Misiek (Incsub)
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License (Version 2 - GPLv2) as published by
