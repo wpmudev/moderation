@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPress Mu install
 Author: WPMU DEV
-Version: 1.0.8.5
+Version: 1.0.8.6
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
@@ -29,7 +29,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-$moderation_current_version = '1.0.8.5';
+$moderation_current_version = '1.0.8.6';
 //------------------------------------------------------------------------//
 //---Config---------------------------------------------------------------//
 //------------------------------------------------------------------------//
@@ -307,7 +307,7 @@ function moderation_init() {
 	global $wpdb, $moderation_current_version;
 
 	if ( !is_multisite() )
-		exit( 'The Messaging plugin is only compatible with WordPress Multisite.' );
+		exit( 'The Moderation plugin is only compatible with WordPress Multisite.' );
 
 	wp_register_script('moderation', plugins_url('moderation/js/moderation.js'), array('thickbox'), $moderation_current_version);
 
