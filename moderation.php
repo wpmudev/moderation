@@ -237,9 +237,9 @@ function moderation_plug_pages() {
 		add_submenu_page('moderation', __('Post Archive', 'moderation'), __('Post Archive', 'moderation'), 'read', 'moderation-post-archive', 'moderation_post_archive' );
 		add_submenu_page('moderation', __('Comment Archive', 'moderation'), __('Comment Archive', 'moderation'), 'read', 'moderation-comment-archive', 'moderation_comment_archive' );
 	}
-	global $current_user;
-
-	get_currentuserinfo();
+	
+	$current_user = wp_get_current_user();
+	
 	if ($wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $current_user->ID . "' AND warning_read = '0'") > 0) {
 		add_menu_page(__('Moderation Warning', 'moderation'), __('Moderation Warning', 'moderation'), 'read', 'moderation-warning', 'moderation_warnings');
 	}
@@ -446,9 +446,11 @@ function moderation_comment_archive_insert($comment_ID){
 }
 
 function moderation_warnings_check() {
-	global $wpdb, $current_user;
+	global $wpdb;
 
-	get_currentuserinfo();
+	
+	$current_user = wp_get_current_user();
+	
 	if ( !strpos($_SERVER['REQUEST_URI'], 'warning') ){
 		$user_warning_count = $wpdb->get_var("SELECT COUNT(*) FROM " . $wpdb->base_prefix . "moderation_warnings WHERE warning_user_ID = '" . $current_user->ID . "' AND warning_read = '0'");
 		if ( $user_warning_count > 0 ) {
@@ -2483,7 +2485,7 @@ function moderation_report_archive() {
 }
 
 function moderation_warnings() {
-	global $wpdb, $wp_roles, $current_user, $user_id, $current_site, $current_user;
+	global $wpdb, $wp_roles, $user_id, $current_site, $current_user;
 
 	if (isset($_GET['updated'])) {
 		?><div id="message" class="updated fade"><p><?php _e(urldecode($_GET['updatedmsg']), 'moderation') ?></p></div><?php
@@ -2492,7 +2494,9 @@ function moderation_warnings() {
 	if (!isset($_GET[ 'action' ])) {
 		$_GET[ 'action' ] = '';
 	}
-	get_currentuserinfo();
+	
+	$current_user = wp_get_current_user();
+	
 	switch( $_GET[ 'action' ] ) {
 		//---------------------------------------------------//
 		default:
