@@ -4,7 +4,7 @@ Plugin Name: Moderation
 Plugin URI: http://premium.wpmudev.org/project/moderation
 Description: Moderate posts, comments and blogs across your WordPress Mu install
 Author: WPMU DEV
-Version: 1.0.8.6
+Version: 1.0.8.7
 Author URI: http://incsub.com
 Network: true
 WDP ID: 82
