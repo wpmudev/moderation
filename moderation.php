@@ -262,7 +262,7 @@ function moderation_site_admin_options_process() {
 	update_site_option( 'moderators_can_remove_users' , $_POST['moderators_can_remove_users'] );
 	update_site_option( 'moderators_can_remove_blogs' , $_POST['moderators_can_remove_blogs'] );
 	if( $_POST['moderation_report_post_reasons'] != '' ) {
-		$moderation_report_post_reasons = preg_split( "\n", stripslashes( $_POST['moderation_report_post_reasons'] ) );
+		$moderation_report_post_reasons = explode( "\n", stripslashes( $_POST['moderation_report_post_reasons'] ) );
 		foreach( (array) $moderation_report_post_reasons as $moderation_report_post_reason ) {
 			$report_post_reasons[] = trim( $moderation_report_post_reason );
 		}
@@ -271,7 +271,7 @@ function moderation_site_admin_options_process() {
 		update_site_option( "moderation_report_post_reasons", '' );
 	}
 	if( $_POST['moderation_report_comment_reasons'] != '' ) {
-		$moderation_report_comment_reasons = preg_split( "\n", stripslashes( $_POST['moderation_report_comment_reasons'] ) );
+		$moderation_report_comment_reasons = explode( "\n", stripslashes( $_POST['moderation_report_comment_reasons'] ) );
 		foreach( (array) $moderation_report_comment_reasons as $moderation_report_comment_reason ) {
 			$report_comment_reasons[] = trim( $moderation_report_comment_reason );
 		}
@@ -280,7 +280,7 @@ function moderation_site_admin_options_process() {
 		update_site_option( "moderation_report_comment_reasons", '' );
 	}
 	if( $_POST['moderation_report_blog_reasons'] != '' ) {
-		$moderation_report_blog_reasons = preg_split( "\n", stripslashes( $_POST['moderation_report_blog_reasons'] ) );
+		$moderation_report_blog_reasons = explode( "\n", stripslashes( $_POST['moderation_report_blog_reasons'] ) );
 		foreach( (array) $moderation_report_blog_reasons as $moderation_report_blog_reason ) {
 			$report_blog_reasons[] = trim( $moderation_report_blog_reason );
 		}
@@ -289,7 +289,7 @@ function moderation_site_admin_options_process() {
 		update_site_option( "moderation_report_blog_reasons", '' );
 	}
 	if( $_POST['moderation_remove_notes'] != '' ) {
-		$moderation_remove_notes = preg_split( "\n", stripslashes( $_POST['moderation_remove_notes'] ) );
+		$moderation_remove_notes = explode( "\n", stripslashes( $_POST['moderation_remove_notes'] ) );
 		foreach( (array) $moderation_remove_notes as $moderation_remove_note ) {
 			$remove_notes[] = trim( $moderation_remove_note );
 		}
