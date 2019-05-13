@@ -2,6 +2,10 @@
 
 **INACTIVE NOTICE: This plugin is unsupported by WPMUDEV, we've published it here for those technical types who might want to fork and maintain it for their needs.**
 
+## Translations
+
+Translation files can be found at https://github.com/wpmudev/translations
+
 ## Moderation lets you manage comments and user generated content from across your entire network from one place–just like the big online news sites.
 
 ### Classy Content
